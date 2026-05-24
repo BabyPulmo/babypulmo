@@ -2,7 +2,7 @@
 
 > Bangla voice-first WhatsApp AI that classifies pediatric respiratory disease from a 30-second cough recording.
 
-**Production:** https://babypulmo.com  •  **Repo:** https://github.com/Shishukantho/babypulmo
+**Production:** https://babypulmo.com  •  **Repo:** https://github.com/BabyPulmo/babypulmo
 
 THE INFINITY AI BUILDFEST 2026 — HealthTech Track — Preliminary submission due **2026-05-15**.
 
