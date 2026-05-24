@@ -1,0 +1,98 @@
+name: Deploy to VPS
+
+# Auto-deploys to the babypulmo self-hosted runner on every push to main.
+# Manually triggerable via the Actions tab → Deploy to VPS → Run workflow.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "submission/**"
+      - "docs/**"
+      - ".gitignore"
+      - "LICENSE"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Deploy mode"
+        required: true
+        default: "update"
+        type: choice
+        options:
+          - update          # git pull + rebuild + restart
+          - up              # bring up (Phase 1: web only)
+          - up-phase2       # bring up web + classifier
+          - reload-clinical # refresh clinical-content env vars only
+
+# Only one deploy at a time. Don't cancel in-flight deploys — let them finish.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Pull + rebuild + smoke-test
+    # Targets only the babypulmo-tagged runner — won't pick a fintant runner by mistake.
+    runs-on: [self-hosted, babypulmo]
+    timeout-minutes: 20
+
+    steps:
+      - name: Show context
+        run: |
+          echo "Triggered by: ${{ github.event_name }}"
+          echo "Commit:       ${{ github.sha }}"
+          echo "Ref:          ${{ github.ref }}"
+          echo "Runner:       ${{ runner.name }}"
+          echo "Mode:         ${{ github.event.inputs.mode || 'update' }}"
+
+      - name: Pull latest code
+        working-directory: /opt/babypulmo
+        run: |
+          git fetch --prune origin main
+          git reset --hard origin/main
+          git log -1 --oneline
+
+      - name: Run deploy
+        working-directory: /opt/babypulmo/deploy
+        run: |
+          MODE="${{ github.event.inputs.mode || 'update' }}"
+          case "$MODE" in
+            update)          ./deploy.sh update ;;
+            up)              ./deploy.sh up ;;
+            up-phase2)       ./deploy.sh up phase2 ;;
+            reload-clinical) ./deploy.sh reload-clinical ;;
+            *)               echo "Unknown mode: $MODE"; exit 1 ;;
+          esac
+
+      - name: Wait for healthcheck
+        run: |
+          # docker-compose healthcheck takes ~30s after restart
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -sf http://127.0.0.1:3010/api/health > /dev/null 2>&1; then
+              echo "✓ /api/health responding"
+              curl -s http://127.0.0.1:3010/api/health | head -3
+              break
+            elif curl -sf http://127.0.0.1:3010/ > /dev/null 2>&1; then
+              # /api/health not built yet — fallback to landing page
+              echo "✓ landing responding (no /api/health route yet — that's Faiyad's Day 4 PR)"
+              break
+            fi
+            echo "  ($i/10) waiting for web container..."
+            sleep 6
+          done
+          docker compose -f /opt/babypulmo/deploy/docker-compose.yml ps
+
+      - name: External reachability (best-effort)
+        run: |
+          # Only meaningful after DNS resolves + cert issued; soft-fail before then.
+          if curl -sf -o /dev/null -w "https://babypulmo.com → HTTP %{http_code}\n" https://babypulmo.com; then
+            echo "✓ External HTTPS reachable"
+          else
+            echo "⚠ External HTTPS not yet reachable (DNS / cert not configured yet — fine for early days)"
+          fi
+
+      - name: Show recent web container logs
+        if: always()
+        working-directory: /opt/babypulmo/deploy
+        run: docker compose logs --tail=30 web 2>&1 || true

@@ -81,11 +81,11 @@ Verify the container is healthy and reachable on loopback:
 
 ```bash
 docker compose ps                                  # web should be "healthy"
-curl -sf http://127.0.0.1:3000/ | head -5          # should return HTML (landing)
-curl -sf http://127.0.0.1:3000/api/health | jq     # health JSON (once Faiyad's PR lands)
+curl -sf http://127.0.0.1:3010/ | head -5          # should return HTML (landing)
+curl -sf http://127.0.0.1:3010/api/health | jq     # health JSON (once Faiyad's PR lands)
 ```
 
-The web container is bound to `127.0.0.1:3000` — **not** publicly exposed. Only host nginx can reach it.
+The web container is bound to `127.0.0.1:3010` — **not** publicly exposed. Only host nginx can reach it.
 
 ---
 
@@ -174,7 +174,20 @@ Open https://babypulmo.com in a browser. Verify SSL padlock + landing renders + 
 
 ---
 
-## 7. Subsequent deploys (when teammates push code)
+## 7. Subsequent deploys — auto via GitHub Actions self-hosted runner
+
+After the one-time runner setup (see `RUNNER-SETUP.md`), **every push to `main` auto-deploys**. No SSH needed. Workflow lives at `.github/workflows/deploy.yml`.
+
+For manual triggers:
+```bash
+gh workflow run deploy.yml -f mode=update           # rebuild + restart
+gh workflow run deploy.yml -f mode=reload-clinical  # after a Dr. Saadi script edit
+gh workflow run deploy.yml -f mode=up-phase2        # after model upload
+```
+
+The legacy SSH path still works as a fallback if the runner is down:
+
+
 
 ```bash
 cd /opt/babypulmo/deploy

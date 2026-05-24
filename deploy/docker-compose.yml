@@ -33,7 +33,9 @@ services:
       - CLASSIFIER_ENDPOINT=http://classifier:8000/predict
     ports:
       # Bind to loopback only — host nginx (and nothing else) can reach this.
-      - "127.0.0.1:3000:3000"
+      # Host port 3000 is taken by fintant-backend on this shared VPS;
+      # we use 3010. Update nginx-host/babypulmo.com.conf if you change this.
+      - "127.0.0.1:3010:3000"
     networks:
       - internal
     healthcheck:
