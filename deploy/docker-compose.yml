@@ -1,0 +1,95 @@
+# Baby Pulmo — production stack
+# Run on VPS: `cd babypulmo/deploy && ./deploy.sh up`
+#
+# Services:
+#   web         — Next.js 14 (standalone build), port 3000 internal
+#   classifier  — Python FastAPI + onnxruntime, port 8000 internal (Phase 2)
+#   caddy       — reverse proxy + auto Let's Encrypt SSL, ports 80/443 public
+#
+# Volumes:
+#   caddy_data, caddy_config  — Let's Encrypt certs (auto-renewed)
+#   classifier_models         — bind-mount of trained .onnx weights from host
+#
+# Networks:
+#   internal — only caddy is exposed to the host; web ↔ classifier private.
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    image: babypulmo-web:latest
+    container_name: babypulmo-web
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - CLASSIFIER_ENDPOINT=http://classifier:8000/predict
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  classifier:
+    build:
+      context: ./classifier
+      dockerfile: Dockerfile
+    image: babypulmo-classifier:latest
+    container_name: babypulmo-classifier
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      - MODEL_PATH=/app/models/babypulmo_wav2vec2_int8.onnx
+      - PORT=8000
+    volumes:
+      - classifier_models:/app/models:ro
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    # Phase 2 only — comment out until trained ONNX exists in classifier_models volume.
+    profiles:
+      - phase2
+
+  caddy:
+    image: caddy:2.8-alpine
+    container_name: babypulmo-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"  # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - internal
+    depends_on:
+      - web
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  classifier_models:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CLASSIFIER_MODELS_DIR:-/var/babypulmo/models}
