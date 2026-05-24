@@ -11,14 +11,14 @@ A solo-built AI-native system that listens to a child's cough through any Androi
 ## Architecture (8 AI-native layers)
 
 ```
-User Interaction      Twilio WhatsApp Business + IVR fallback
+User Interaction      Meta WhatsApp Cloud API direct (free service msgs in BD)
 Audio Preprocessing   Noise removal + cough segmentation + quality gate
-AI Intelligence       Wav2Vec2-XLSR fine-tuned on Coswara + Grad-CAM heatmap
+AI Intelligence       Wav2Vec2-XLSR fine-tuned on Coswara → int8 ONNX on Modal CPU
 Knowledge Retrieval   Supabase pgvector RAG over WHO IMCI + DGHS guidelines
-Decision Layer        Rules-gated severity (NOT LLM) + Claude Bangla reasoning
-Agent Orchestration   GraphDB-routed CHW alerts with audio + GPS
+Decision Layer        Rules-gated severity (deterministic) + stock Bangla scripts
+Agent Orchestration   PostGIS-routed CHW alerts with audio + GPS
 Data Infrastructure   Supabase Postgres + immutable audit + PostGIS
-Deployment            Vercel edge + Modal GPU inference
+Deployment            Vercel + Supabase + Modal CPU + Google Cloud TTS
 ```
 
 ## Quick start
@@ -50,13 +50,13 @@ vercel deploy
 
 ## Required API keys
 
-See `.env.example`. Sign up for:
+See `DEPLOY.md`. Sign up for:
 - **Vercel** (free) — hosting + edge functions
 - **Supabase** (free) — Postgres + pgvector + storage + auth
-- **Twilio** (free WhatsApp sandbox) — WhatsApp Business API
-- **Anthropic** — Claude API key for reasoning agent
-- **ElevenLabs** (free 10k chars/mo) — Bangla TTS
-- **Modal** OR **Replicate** (free credits) — GPU inference for the cough classifier
+- **Meta WhatsApp Cloud API** (free) — direct, no Twilio markup
+- **Google Cloud Text-to-Speech** (~$16/1M chars, mostly cached) — Bangla TTS
+- **OpenAI** — embeddings (one-time IMCI ingest)
+- **Modal** (free credits) — CPU inference for the int8 cough classifier
 
 ## Repo structure
 
@@ -73,9 +73,10 @@ shishukantho/
 │   ├── supabase.ts                     # Supabase client
 │   ├── classifier.ts                   # Cough classifier wrapper
 │   ├── rag.ts                          # pgvector retrieval
-│   ├── claude.ts                       # Claude Bangla reasoning agent
-│   ├── tts.ts                          # ElevenLabs Bangla TTS
-│   ├── escalation.ts                   # Rules-gated severity + CHW routing
+│   ├── claude.ts                       # Rules-gated severity table (no LLM)
+│   ├── tts.ts                          # GCP Bangla TTS + content-hash cache + stock library
+│   ├── whatsapp.ts                     # Meta WhatsApp Cloud API client
+│   ├── escalation.ts                   # PostGIS nearest-CHW routing
 │   ├── audit.ts                        # Immutable audit log
 │   └── types.ts                        # Shared types
 ├── supabase/
@@ -89,19 +90,20 @@ shishukantho/
 ## Demo flow
 
 1. User sends a 30-sec cough voice note to the ShishuKantho WhatsApp number
-2. Webhook downloads audio, uploads to Supabase Storage
-3. Classifier returns: `{class, confidence, heatmap_url}` (~3 sec)
-4. RAG retrieves matching WHO IMCI protocol chunks (~500ms)
-5. Claude generates Bangla audio guidance + escalation decision (~2 sec)
-6. ElevenLabs TTS converts guidance to Bangla audio
-7. Twilio sends Bangla audio + text card back to user
-8. If severity rule triggers, alert posted to `/chw` dashboard with audio + GPS
-9. CHW receives WhatsApp ping with audio attachment
-10. Full audit row written to Supabase
+2. Meta delivers a webhook to Vercel; signature verified via app-secret HMAC
+3. Webhook downloads audio from Meta Graph API, uploads to Supabase Storage
+4. Int8 ONNX classifier on Modal CPU returns `{class, confidence, heatmap}` (~5 sec)
+5. RAG retrieves matching WHO IMCI protocol chunks (~500ms, logged for audit)
+6. Rules-gated severity table picks the action; the matching stock Bangla script is selected — no LLM call at runtime
+7. GCP TTS converts guidance to Bangla audio (cache hit on stock = $0)
+8. Webhook sends text card + Bangla audio back to user via Meta Graph API
+9. If severity triggers, alert posted to `/chw` dashboard with audio + GPS
+10. CHW receives WhatsApp ping with audio attachment
+11. Full audit row written to Supabase
 
 ## Critical design decisions
 
-**Rules-gated severity (NOT LLM-gated)**. Red-flag escalation is decided by deterministic rules over the classifier output, not by Claude's discretion. The LLM generates Bangla text but never decides if a case is severe. This is the "responsible AI" point judges look for.
+**Rules-gated severity, no runtime LLM**. Red-flag escalation is decided by a deterministic table over the classifier output. Bangla guidance is served from a hand-written stock library auditable by clinicians (no Claude call per request). This is the "responsible AI" point judges look for — every Bangla string a caregiver hears is one a CHW reviewed.
 
 **Decision-support framing, not diagnostic device**. We do not claim to diagnose. We say "this cough shows signs of pneumonia, see a doctor now." Same legal framing as ResApp Health (Pfizer acquisition).
 

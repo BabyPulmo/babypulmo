@@ -10,12 +10,10 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.30.0",
     "@supabase/supabase-js": "^2.45.4",
     "next": "14.2.18",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "twilio": "^5.3.5",
     "zod": "^3.23.8"
   },
   "devDependencies": {

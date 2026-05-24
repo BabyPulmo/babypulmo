@@ -13,8 +13,9 @@ ShishuKantho implements all 8 layers of the BuildFest 2026 AI-Native Reference A
                   │ voice note
                   ▼
         ┌─────────────────────┐
-        │   Twilio WhatsApp   │  (User Interaction Layer)
-        │   Business API       │
+        │ Meta WhatsApp Cloud │  (User Interaction Layer)
+        │  API (direct, free  │
+        │  service messages)  │
         └──────────┬──────────┘
                    │ webhook POST
                    ▼
@@ -32,8 +33,8 @@ ShishuKantho implements all 8 layers of the BuildFest 2026 AI-Native Reference A
 └─────────────────┘             │
                                 ▼
                   ┌─────────────────────────┐
-                  │  Wav2Vec2 Classifier     │  (AI Intelligence Layer)
-                  │  Modal serverless GPU/CPU│
+                  │  Wav2Vec2 int8 ONNX      │  (AI Intelligence Layer)
+                  │  Modal serverless CPU    │
                   │  6-class output +        │
                   │  Grad-CAM heatmap        │
                   └─────────────┬───────────┘
@@ -48,18 +49,21 @@ ShishuKantho implements all 8 layers of the BuildFest 2026 AI-Native Reference A
                                 ▼
                   ┌─────────────────────────┐
                   │  Rules-Gated Severity   │  (Decision Layer)
-                  │  (deterministic, NOT LLM)│
-                  │  + Claude Bangla reasoner│
+                  │  (deterministic table)   │
+                  │  → Stock Bangla script   │
+                  │  (no LLM at runtime)     │
                   └─────────────┬───────────┘
                                 │ Bangla guidance + escalation flag
                                 ▼
                   ┌─────────────────────────┐
-                  │  ElevenLabs Bangla TTS  │
+                  │  GCP bn-IN Bangla TTS   │
+                  │  (content-hash cached;   │
+                  │   stock = $0/call)       │
                   └─────────────┬───────────┘
                                 │ audio MP3
                                 ▼
               ┌──────────────────────────────┐
-              │  Reply caregiver (Twilio)    │
+              │  Reply caregiver (Meta WA)   │
               └──────────────────────────────┘
                                 │
                                 │ if mustEscalate:
@@ -78,25 +82,25 @@ ShishuKantho implements all 8 layers of the BuildFest 2026 AI-Native Reference A
                   └─────────────────────────┘
 
        (Every step writes to audit_log table — Data Infrastructure Layer)
-       (Deployment: Vercel edge + Supabase + Modal — Deployment Layer)
+       (Deployment: Vercel + Supabase + Modal CPU + GCP TTS — Deployment Layer)
 ```
 
 ## 8-layer mapping to code
 
 | Layer | Implementation | File |
 |---|---|---|
-| 1. User Interaction | Twilio WhatsApp Business API + IVR fallback | `app/api/webhook/whatsapp/route.ts` |
-| 2. Application Logic | Next.js 14 App Router on Vercel edge | `app/api/*/route.ts` |
-| 3. AI Intelligence | Wav2Vec2-XLSR fine-tuned on Coswara + Grad-CAM | `colab/train_wav2vec2.py`, `colab/deploy_modal.py`, `lib/classifier.ts` |
+| 1. User Interaction | Meta WhatsApp Cloud API direct + IVR fallback | `lib/whatsapp.ts`, `app/api/webhook/whatsapp/route.ts` |
+| 2. Application Logic | Next.js 14 App Router on Vercel | `app/api/*/route.ts` |
+| 3. AI Intelligence | Wav2Vec2-XLSR fine-tuned on Coswara → int8 ONNX + Grad-CAM | `colab/train_wav2vec2.py`, `colab/deploy_modal.py`, `lib/classifier.ts` |
 | 4. Knowledge Retrieval | Supabase pgvector RAG over WHO IMCI + DGHS | `lib/rag.ts`, `supabase/seed_imci.sql` |
-| 5. Decision / Reasoning | Rules-gated severity + Claude Bangla reasoner | `lib/claude.ts` |
+| 5. Decision / Reasoning | Rules-gated severity + clinician-reviewed stock Bangla scripts | `lib/claude.ts`, `lib/tts.ts` (`STOCK_BANGLA`) |
 | 6. Agent Orchestration | Nearest-CHW routing + alert dispatch | `lib/escalation.ts`, `supabase/schema.sql` (find_nearest_chw) |
 | 7. Data Infrastructure | Supabase Postgres + Storage + PostGIS + audit log | `supabase/schema.sql`, `lib/audit.ts`, `lib/supabase.ts` |
-| 8. Deployment | Vercel edge functions + Modal serverless inference | `next.config.js`, `colab/deploy_modal.py`, Vercel project |
+| 8. Deployment | Vercel + Supabase + Modal CPU + GCP TTS | `next.config.js`, `colab/deploy_modal.py`, Vercel project |
 
 ## Responsible AI design choices
 
-1. **Rules-gated severity, not LLM-gated.** `SEVERITY_RULES` in `lib/claude.ts` is a deterministic lookup table. The LLM writes the Bangla text but cannot decide whether a case is severe. Red-flag escalation depends only on `(classifier_class, classifier_confidence >= 0.5)`.
+1. **Rules-gated severity + no runtime LLM.** `SEVERITY_RULES` in `lib/claude.ts` is a deterministic lookup table. Bangla guidance is served from `STOCK_BANGLA` in `lib/tts.ts` — clinician-reviewable hand-written scripts, one per `(class, severity)` tuple. No model writes new prose at request time, so every word a caregiver hears was vetted in advance. Red-flag escalation depends only on `(classifier_class, classifier_confidence >= 0.5)`.
 
 2. **Decision-support framing.** All caregiver-facing language says "the cough shows signs of X, see a doctor" — never "your child has X." Same legal posture as ResApp Health (Pfizer acquired 2022).
 

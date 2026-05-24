@@ -24,7 +24,10 @@ image = (
         "requests==2.32.3",
         "matplotlib==3.9.2",
     )
-    .copy_local_file("shishukantho_wav2vec2.onnx", "/model/shishukantho_wav2vec2.onnx")
+    .copy_local_file(
+        "shishukantho_wav2vec2_int8.onnx",
+        "/model/shishukantho_wav2vec2.onnx",
+    )
 )
 
 ID2LABEL = {
@@ -37,13 +40,25 @@ TARGET_SR = 16000
 SEGMENT_LEN = TARGET_SR * 5  # 5 seconds
 
 
-@app.cls(image=image, gpu=None, timeout=120, container_idle_timeout=300)
+# CPU-only, 2 vCPU + 2 GB. ~5s int8 inference per call ≈ $0.0003 on Modal.
+@app.cls(
+    image=image,
+    gpu=None,
+    cpu=2.0,
+    memory=2048,
+    timeout=120,
+    container_idle_timeout=300,
+)
 class Classifier:
     @modal.enter()
     def setup(self):
         import onnxruntime as ort
+        opts = ort.SessionOptions()
+        opts.intra_op_num_threads = 2
+        opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         self.session = ort.InferenceSession(
             "/model/shishukantho_wav2vec2.onnx",
+            sess_options=opts,
             providers=["CPUExecutionProvider"],
         )
 

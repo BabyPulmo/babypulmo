@@ -292,7 +292,27 @@ torch.onnx.export(
 print("Exported shishukantho_wav2vec2.onnx")
 
 # %% [markdown]
+# ## 10b. Dynamic int8 quantization for cheap CPU inference
+# Cuts model size ~4x and CPU latency ~2-3x with negligible accuracy loss for
+# this task. The quantized model is what production loads on Modal CPU.
+
+# %%
+!pip install -q onnxruntime onnx
+from onnxruntime.quantization import quantize_dynamic, QuantType
+
+quantize_dynamic(
+    model_input="shishukantho_wav2vec2.onnx",
+    model_output="shishukantho_wav2vec2_int8.onnx",
+    weight_type=QuantType.QInt8,
+)
+
+import os
+fp32_mb = os.path.getsize("shishukantho_wav2vec2.onnx") / 1024 / 1024
+int8_mb = os.path.getsize("shishukantho_wav2vec2_int8.onnx") / 1024 / 1024
+print(f"fp32: {fp32_mb:.1f} MB → int8: {int8_mb:.1f} MB ({fp32_mb / int8_mb:.1f}x smaller)")
+
+# %% [markdown]
 # ## 11. Next step: deploy with `deploy_modal.py`
-# Run `python deploy_modal.py deploy` to host the ONNX model on Modal as a
-# serverless GPU/CPU inference endpoint. Update CLASSIFIER_ENDPOINT in your
+# Download `shishukantho_wav2vec2_int8.onnx`, place it next to `deploy_modal.py`,
+# then `modal deploy deploy_modal.py`. Update `CLASSIFIER_ENDPOINT` in your
 # Vercel env vars with the returned URL.

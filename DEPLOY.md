@@ -8,9 +8,8 @@ Step-by-step from a fresh machine to a working WhatsApp demo. Total time: ~6 hou
 |---|---|---|
 | Vercel | vercel.com | account + install `npm i -g vercel` |
 | Supabase | supabase.com | new project; copy `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
-| Twilio | twilio.com | account + WhatsApp Sandbox (Console → Develop → Messaging → Try it out → WhatsApp); copy `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` |
-| Anthropic | console.anthropic.com | `ANTHROPIC_API_KEY` |
-| ElevenLabs | elevenlabs.io | `ELEVENLABS_API_KEY` + create/find a Bangla-capable voice → `ELEVENLABS_BANGLA_VOICE_ID` (use a multilingual v2 voice) |
+| Meta WhatsApp | developers.facebook.com | (1) Create a Business app → add WhatsApp product (2) note the test phone number ID → `WHATSAPP_PHONE_NUMBER_ID` (3) System User → permanent token → `WHATSAPP_ACCESS_TOKEN` (4) App Settings → Basic → App Secret → `WHATSAPP_APP_SECRET` (5) pick any random string → `WHATSAPP_VERIFY_TOKEN` |
+| Google Cloud TTS | console.cloud.google.com | enable "Cloud Text-to-Speech API" → APIs & Services → Credentials → Create API key → restrict to Text-to-Speech → `GCP_TTS_API_KEY` |
 | OpenAI | platform.openai.com | `OPENAI_API_KEY` (only for text-embedding-3-large during IMCI ingest) |
 | Modal | modal.com | `pip install modal && modal token new` |
 | Google Colab | colab.research.google.com | free; set runtime to T4 GPU |
@@ -81,12 +80,11 @@ vercel
 vercel env add NEXT_PUBLIC_SUPABASE_URL          # paste value
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 vercel env add SUPABASE_SERVICE_ROLE_KEY
-vercel env add ANTHROPIC_API_KEY
-vercel env add TWILIO_ACCOUNT_SID
-vercel env add TWILIO_AUTH_TOKEN
-vercel env add TWILIO_WHATSAPP_FROM
-vercel env add ELEVENLABS_API_KEY
-vercel env add ELEVENLABS_BANGLA_VOICE_ID
+vercel env add WHATSAPP_PHONE_NUMBER_ID
+vercel env add WHATSAPP_ACCESS_TOKEN
+vercel env add WHATSAPP_APP_SECRET
+vercel env add WHATSAPP_VERIFY_TOKEN
+vercel env add GCP_TTS_API_KEY
 vercel env add CLASSIFIER_ENDPOINT
 vercel env add OPENAI_API_KEY
 vercel --prod
@@ -94,17 +92,15 @@ vercel --prod
 
 Note the production URL: `https://your-project.vercel.app`
 
-## Hour 5: Wire Twilio WhatsApp Sandbox
+## Hour 5: Wire Meta WhatsApp Cloud API
 
-1. Twilio Console → Develop → Messaging → Try it out → Send a WhatsApp message
-2. Note the sandbox WhatsApp number (usually `+1 415 523 8886`) and the join code (`join your-keyword`)
-3. Sandbox configuration tab → WHEN A MESSAGE COMES IN → set to:
-   ```
-   https://your-project.vercel.app/api/webhook/whatsapp
-   ```
-   HTTP POST
-4. Send `join your-keyword` from your personal WhatsApp to the sandbox number to enrol
-5. Send any text → you should get the Bangla greeting back
+1. Meta App Dashboard → your app → WhatsApp → Configuration → Webhook
+2. Callback URL: `https://your-project.vercel.app/api/webhook/whatsapp`
+3. Verify Token: paste the same string you set as `WHATSAPP_VERIFY_TOKEN`
+4. Click "Verify and Save" — Meta sends a GET to your endpoint with `hub.challenge`; the route handler echoes it back
+5. Subscribe to the `messages` field
+6. WhatsApp → API Setup → "To" number → add your personal phone as a recipient (test mode allows up to 5 testers; required before business verification)
+7. From your personal WhatsApp, send any text to the displayed test number → expect the Bangla greeting back
 
 ## Hour 5–6: End-to-end test
 
@@ -147,11 +143,14 @@ Test 3 — full classifier:
 
 ## Common gotchas
 
-- **Bangla TTS broken**: Try a different ElevenLabs voice — not all multilingual v2 voices speak Bangla equally well. Test with one sentence first.
-- **Twilio sandbox media access**: Twilio media URLs require HTTP Basic Auth with your Account SID + Auth Token. The webhook does this; if you hit 401 in logs, double-check those env vars are correct.
-- **Supabase CORS for storage**: signed URLs work for downloading; if you can't play the audio in WhatsApp, check the bucket is public-read or signed URL TTL is long enough.
-- **Modal cold start**: first request after idle can take 30+ seconds. The webhook has a 60s `maxDuration` to accommodate.
+- **Webhook verification fails**: Meta sends a GET with `hub.verify_token` — it must match your `WHATSAPP_VERIFY_TOKEN` env var exactly. Vercel must be deployed before clicking Verify.
+- **`401 invalid signature`**: `WHATSAPP_APP_SECRET` is wrong, or you're using the temporary token instead of the System User permanent token. Check Meta App Settings → Basic.
+- **Meta media download 401**: `WHATSAPP_ACCESS_TOKEN` expired (temporary tokens last 24h). Generate a System User permanent token instead.
+- **Bangla TTS sounds Indian-Bengali**: GCP only ships `bn-IN` (mutually intelligible). For Bangladesh-native pronunciation, swap to `bn-BD` via Coqui or Piper later.
+- **TTS audio not playing in WhatsApp**: Meta requires the `audio.link` to be reachable from public internet via HTTPS. Supabase signed URLs satisfy this but the TTL must outlast Meta's fetch (1 hour is fine).
+- **Modal cold start**: first request after idle can take 15-30 seconds on the int8 model. Webhook has a 60s `maxDuration`.
 - **`crypto.randomUUID()` not defined**: Make sure you're on Node 18+ runtime in Vercel.
+- **Pre-warm the TTS cache**: after deploy, hit `warmStockCache()` once (e.g. add a temporary `/api/warm` route or call from a Node script with the env vars). All 7 stock scripts get cached so the first user call is already a hit.
 
 ## Done = these all work
 
