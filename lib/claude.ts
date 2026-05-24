@@ -5,26 +5,39 @@ import type {
   CoughClass
 } from "./types";
 
-// Rules-gated severity table. NOT LLM discretion — deterministic.
-// Kept as the only "decision" code path; no LLM is called at runtime.
-// Bangla text is served from the stock library in lib/tts.ts.
-const SEVERITY_RULES: Record<
-  CoughClass,
-  { mustEscalate: boolean; severity: Severity; action: RecommendedAction }
-> = {
-  pneumonia: { mustEscalate: true, severity: "critical", action: "see_chw_now" },
-  bronchiolitis: { mustEscalate: true, severity: "high", action: "see_chw_now" },
-  croup: { mustEscalate: true, severity: "high", action: "see_chw_now" },
-  pertussis: { mustEscalate: true, severity: "high", action: "see_doctor_24h" },
-  asthma: { mustEscalate: false, severity: "moderate", action: "see_doctor_24h" },
-  normal: { mustEscalate: false, severity: "low", action: "observe_24h" },
-  insufficient_quality: { mustEscalate: false, severity: "low", action: "normal" }
+// Rules-gated severity table. NOT LLM discretion — deterministic. Loaded from
+// SEVERITY_RULES_JSON env var (private clinical content). Canonical values live
+// in the BabyPulmo/clinical-content repo, reviewed by Clinical Advisor. If the
+// env var is unset, every classification falls through to a safe default
+// (escalate + see_chw_now) — fail-closed.
+type Rule = { mustEscalate: boolean; severity: Severity; action: RecommendedAction };
+
+const DEFAULT_RULE: Rule = {
+  mustEscalate: true,
+  severity: "high",
+  action: "see_chw_now"
 };
+
+function loadSeverityRules(): Partial<Record<CoughClass, Rule>> {
+  const raw = process.env.SEVERITY_RULES_JSON;
+  if (!raw) {
+    console.warn("[claude] SEVERITY_RULES_JSON not set — fail-closed defaults active");
+    return {};
+  }
+  try {
+    return JSON.parse(raw) as Partial<Record<CoughClass, Rule>>;
+  } catch (e) {
+    console.error("[claude] SEVERITY_RULES_JSON parse error:", e);
+    return {};
+  }
+}
+
+const SEVERITY_RULES = loadSeverityRules();
 
 const CONFIDENCE_THRESHOLD = 0.5;
 
 export function decideSeverity(c: ClassificationResult) {
-  const rule = SEVERITY_RULES[c.class];
+  const rule = SEVERITY_RULES[c.class] ?? DEFAULT_RULE;
   return {
     mustEscalate: rule.mustEscalate && c.confidence >= CONFIDENCE_THRESHOLD,
     severity: rule.severity,

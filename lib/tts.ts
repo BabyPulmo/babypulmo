@@ -7,27 +7,28 @@ const GCP_TTS_VOICE = process.env.GCP_TTS_VOICE ?? "bn-IN-Wavenet-A";
 const CACHE_BUCKET = process.env.TTS_CACHE_BUCKET ?? "recordings";
 const CACHE_PREFIX = "tts-cache";
 
-// Hand-written rural-friendly Bangla scripts for the 7 (class, severity) tuples
-// the rules layer can produce. When a classification matches one of these, the
-// webhook can skip Claude AND hit the pre-warmed TTS cache — saving ~$0.054 per
-// call. Romanized Bangla matches the convention used in the webhook greetings.
-// Should be reviewed by a Bangla-native CHW before clinical deployment.
-export const STOCK_BANGLA: Partial<Record<`${CoughClass}:${Severity}`, string>> = {
-  "pneumonia:critical":
-    "Apnar shishur cough-e pneumonia-r alamat dekha jacche. Ekjon CHW alert peyechen ebong drukito ashben. Doya kore shishuke shojaye boshiye rakhun ebong tarol khabar din. Joruri obostha-ye 999 kol korun. Ei tothyo doctor-er bikolpo noy.",
-  "bronchiolitis:high":
-    "Apnar shishur cough-e bronchiolitis-er alamat dekha jacche. Ekjon CHW alert peyechen ebong ashben. Shishur buk joto pora hocche kina dekhun. Bhoyer kichu nei, amra apnar pashe achi. Ei tothyo doctor-er bikolpo noy.",
-  "croup:high":
-    "Apnar shishur cough-e croup-er alamat dekha jacche. Ekjon CHW alert peyechen. Shishuke garam jol-er bhapra-r kachhe niye jaan, eta srash sojha kore. Bhoyer kichu nei. Ei tothyo doctor-er bikolpo noy.",
-  "pertussis:high":
-    "Apnar shishur cough-e whooping cough-er alamat dekha jacche. Agami 24 ghonta-r moddhe doctor-er kachhe niye jaan. CHW-ke jananu hoyeche. Apnar shishu shighroi sustho hobe inshallah. Ei tothyo doctor-er bikolpo noy.",
-  "asthma:moderate":
-    "Apnar shishur cough-e asthma-r alamat dekha jacche. Doya kore agami 24 ghonta-r moddhe doctor-er kachhe niye jaan. Shishuke dhumpaan ar dhula theke dure rakhun. Ei tothyo doctor-er bikolpo noy.",
-  "normal:low":
-    "Alhamdulillah, apnar shishur cough-e gambhir kichu paowa jaayni. Agami 24 ghonta lokkho korun. Joto bere gele abar voice pathan. Apnar shishu bhalo ache. Ei tothyo doctor-er bikolpo noy.",
-  "insufficient_quality:low":
-    "Audio sposhto chhilo na. Doya kore aro shanto jaygay giye 30 second-er ekti spoint cough record kore abar pathan. Dhonnobad."
-};
+// Bangla guidance scripts for the 7 (class, severity) tuples the rules layer can
+// produce. Loaded at module init from STOCK_BANGLA_JSON env var (private content,
+// clinician-reviewed). See BabyPulmo/clinical-content repo for the canonical
+// values. If unset, decideSeverity callers fall back to Claude — slower and more
+// expensive but functional.
+function loadStockBangla(): Partial<Record<`${CoughClass}:${Severity}`, string>> {
+  const raw = process.env.STOCK_BANGLA_JSON;
+  if (!raw) {
+    if (process.env.NODE_ENV !== "test") {
+      console.warn("[tts] STOCK_BANGLA_JSON not set — every call will hit Claude");
+    }
+    return {};
+  }
+  try {
+    return JSON.parse(raw) as Partial<Record<`${CoughClass}:${Severity}`, string>>;
+  } catch (e) {
+    console.error("[tts] STOCK_BANGLA_JSON parse error:", e);
+    return {};
+  }
+}
+
+export const STOCK_BANGLA = loadStockBangla();
 
 export function getStockBangla(c: CoughClass, s: Severity): string | null {
   return STOCK_BANGLA[`${c}:${s}` as keyof typeof STOCK_BANGLA] ?? null;
