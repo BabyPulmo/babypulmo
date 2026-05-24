@@ -2,12 +2,20 @@
 # Baby Pulmo — one-shot VPS deploy / update script.
 # Usage on VPS:
 #   cd /opt/babypulmo/deploy
-#   ./deploy.sh up                # first-time bring-up (web + caddy)
+#   ./deploy.sh up                # first-time bring-up (web only)
 #   ./deploy.sh up phase2         # bring up classifier too (after model uploaded)
 #   ./deploy.sh update            # pull latest code + rebuild + restart
 #   ./deploy.sh logs              # tail all logs
 #   ./deploy.sh status            # ps + health
 #   ./deploy.sh down              # stop everything
+#   ./deploy.sh reload-clinical   # refresh clinical-content env vars + restart web
+#   ./deploy.sh sync-nginx        # symlink nginx-host/babypulmo.com.conf → sites-enabled + reload
+#
+# Host requirements (installed once, NOT managed by this script):
+#   - Docker engine + docker compose plugin
+#   - nginx (host-side reverse proxy + SSL via certbot)
+#   - certbot + python3-certbot-nginx (for Let's Encrypt)
+# See DEPLOY-VPS.md for the one-time install steps.
 
 set -euo pipefail
 
@@ -33,12 +41,15 @@ case "$CMD" in
     if [ "$PROFILE" = "phase2" ]; then
       $COMPOSE --profile phase2 up -d --build
     else
-      $COMPOSE up -d --build web caddy
+      $COMPOSE up -d --build web
     fi
     echo "→ Waiting for health checks..."
     sleep 10
     $COMPOSE ps
-    echo "✓ Up. Visit https://babypulmo.com"
+    echo ""
+    echo "✓ Up. Web is on 127.0.0.1:3000."
+    echo "  Make sure host nginx is proxying babypulmo.com → 127.0.0.1:3000."
+    echo "  Run: ./deploy.sh sync-nginx (first time only)"
     ;;
 
   update)
@@ -51,7 +62,7 @@ case "$CMD" in
       $COMPOSE --profile phase2 up -d
     else
       $COMPOSE build web
-      $COMPOSE up -d web caddy
+      $COMPOSE up -d web
     fi
     echo "✓ Updated."
     $COMPOSE ps
@@ -67,6 +78,17 @@ case "$CMD" in
     echo "→ Health checks:"
     docker inspect --format='{{.Name}}: {{.State.Health.Status}}' \
       $($COMPOSE ps -q) 2>/dev/null || true
+    echo ""
+    echo "→ Host nginx site:"
+    if [ -L /etc/nginx/sites-enabled/babypulmo.com ]; then
+      echo "  enabled ✓"
+    else
+      echo "  NOT enabled — run ./deploy.sh sync-nginx"
+    fi
+    echo ""
+    echo "→ External:"
+    curl -sf -o /dev/null -w "  https://babypulmo.com → HTTP %{http_code} (%{time_total}s)\n" https://babypulmo.com || \
+      echo "  babypulmo.com unreachable (DNS not propagated or nginx down)"
     ;;
 
   down)
@@ -95,17 +117,40 @@ case "$CMD" in
     echo "✓ Clinical content reloaded; web restarted."
     ;;
 
+  sync-nginx)
+    # Install the nginx site config from this repo to the host system.
+    # Idempotent — safe to re-run after a `git pull` that changes the site config.
+    if [ ! -f "nginx-host/babypulmo.com.conf" ]; then
+      echo "✗ nginx-host/babypulmo.com.conf not found"
+      exit 1
+    fi
+    sudo cp -f nginx-host/babypulmo.com.conf /etc/nginx/sites-available/babypulmo.com
+    sudo ln -sf /etc/nginx/sites-available/babypulmo.com /etc/nginx/sites-enabled/babypulmo.com
+    # Remove the default catch-all if present (first time only)
+    if [ -L /etc/nginx/sites-enabled/default ]; then
+      echo "→ Disabling /etc/nginx/sites-enabled/default"
+      sudo rm /etc/nginx/sites-enabled/default
+    fi
+    sudo nginx -t
+    sudo systemctl reload nginx
+    echo "✓ nginx site installed + reloaded."
+    echo ""
+    echo "Next: run certbot once after DNS resolves:"
+    echo "  sudo certbot --nginx -d babypulmo.com -d www.babypulmo.com --agree-tos -m klikk.ai.new@gmail.com --no-eff-email"
+    ;;
+
   *)
     cat <<USAGE
 Baby Pulmo deploy script
 
-  ./deploy.sh up                  Bring up web + caddy (Phase 1)
-  ./deploy.sh up phase2           Bring up web + caddy + classifier (Phase 2)
+  ./deploy.sh up                  Bring up web (Phase 1)
+  ./deploy.sh up phase2           Bring up web + classifier (Phase 2)
   ./deploy.sh update              git pull + rebuild + restart
   ./deploy.sh logs                Tail all service logs
-  ./deploy.sh status              ps + health
+  ./deploy.sh status              ps + health + nginx site + external reachability
   ./deploy.sh down                Stop everything
   ./deploy.sh reload-clinical     Pull clinical-content repo, refresh env vars, restart web
+  ./deploy.sh sync-nginx          Install nginx-host/babypulmo.com.conf → /etc/nginx + reload
 USAGE
     ;;
 esac
