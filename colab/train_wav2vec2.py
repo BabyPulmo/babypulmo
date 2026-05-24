@@ -1,4 +1,4 @@
-# ShishuKantho — Wav2Vec2 cough classifier training
+# Baby Pulmo — Wav2Vec2 cough classifier training
 #
 # This is a Colab-ready Python script with `# %%` cell markers (Jupytext/VS Code format).
 # In Colab: open new notebook, set runtime to T4 GPU, then either
@@ -10,7 +10,7 @@
 # Target: >=80% accuracy on held-out test set.
 
 # %% [markdown]
-# # ShishuKantho: Cough Classifier Training
+# # Baby Pulmo: Cough Classifier Training
 # Fine-tunes Wav2Vec2-XLSR-53 on the Coswara dataset for pediatric respiratory
 # disease classification. Outputs an ONNX model + Grad-CAM heatmap generator.
 
@@ -202,7 +202,7 @@ def compute_metrics(eval_pred):
     }
 
 training_args = TrainingArguments(
-    output_dir="./shishukantho_wav2vec2",
+    output_dir="./babypulmo_wav2vec2",
     num_train_epochs=4,
     per_device_train_batch_size=4,
     per_device_eval_batch_size=4,
@@ -283,13 +283,13 @@ plt.show()
 torch.onnx.export(
     model.cpu(),
     (torch.zeros(1, SEGMENT_LEN, dtype=torch.float32),),
-    "shishukantho_wav2vec2.onnx",
+    "babypulmo_wav2vec2.onnx",
     input_names=["input_values"],
     output_names=["logits"],
     dynamic_axes={"input_values": {0: "batch"}, "logits": {0: "batch"}},
     opset_version=14,
 )
-print("Exported shishukantho_wav2vec2.onnx")
+print("Exported babypulmo_wav2vec2.onnx")
 
 # %% [markdown]
 # ## 10b. Dynamic int8 quantization for cheap CPU inference
@@ -301,18 +301,18 @@ print("Exported shishukantho_wav2vec2.onnx")
 from onnxruntime.quantization import quantize_dynamic, QuantType
 
 quantize_dynamic(
-    model_input="shishukantho_wav2vec2.onnx",
-    model_output="shishukantho_wav2vec2_int8.onnx",
+    model_input="babypulmo_wav2vec2.onnx",
+    model_output="babypulmo_wav2vec2_int8.onnx",
     weight_type=QuantType.QInt8,
 )
 
 import os
-fp32_mb = os.path.getsize("shishukantho_wav2vec2.onnx") / 1024 / 1024
-int8_mb = os.path.getsize("shishukantho_wav2vec2_int8.onnx") / 1024 / 1024
+fp32_mb = os.path.getsize("babypulmo_wav2vec2.onnx") / 1024 / 1024
+int8_mb = os.path.getsize("babypulmo_wav2vec2_int8.onnx") / 1024 / 1024
 print(f"fp32: {fp32_mb:.1f} MB → int8: {int8_mb:.1f} MB ({fp32_mb / int8_mb:.1f}x smaller)")
 
 # %% [markdown]
 # ## 11. Next step: deploy with `deploy_modal.py`
-# Download `shishukantho_wav2vec2_int8.onnx`, place it next to `deploy_modal.py`,
+# Download `babypulmo_wav2vec2_int8.onnx`, place it next to `deploy_modal.py`,
 # then `modal deploy deploy_modal.py`. Update `CLASSIFIER_ENDPOINT` in your
 # Vercel env vars with the returned URL.

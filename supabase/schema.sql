@@ -1,4 +1,4 @@
--- ShishuKantho Supabase schema
+-- Baby Pulmo Supabase schema
 -- Paste into Supabase SQL editor and run
 
 -- Extensions

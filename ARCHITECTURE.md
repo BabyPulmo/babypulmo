@@ -1,6 +1,6 @@
-# ShishuKantho — Architecture
+# Baby Pulmo — Architecture
 
-ShishuKantho implements all 8 layers of the BuildFest 2026 AI-Native Reference Architecture (participant guide, page 8). This document maps each layer to the actual implementation files in this repo.
+Baby Pulmo implements all 8 layers of the BuildFest 2026 AI-Native Reference Architecture (participant guide, page 8). This document maps each layer to the actual implementation files in this repo.
 
 ## End-to-end data flow
 
@@ -150,4 +150,4 @@ colab/
 - **Cohort.ai** — cough AI for adult and pediatric respiratory disease, deployed in Australian and US clinical settings.
 - **Hyfe** — cough monitoring for chronic disease. $25M Series A 2023.
 
-ShishuKantho is the LMIC-deployable, Bangla-first, pediatric-pneumonia-focused version of this validated category.
+Baby Pulmo is the LMIC-deployable, Bangla-first, pediatric-pneumonia-focused version of this validated category.

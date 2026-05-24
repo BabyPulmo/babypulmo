@@ -1,4 +1,4 @@
--- ShishuKantho — IMCI RAG seed
+-- Baby Pulmo — IMCI RAG seed
 -- Adds the pgvector match function + a small set of sample chunks for demo.
 -- For full production, run scripts/ingest_imci.ts to ingest the WHO IMCI handbook (~120 pages).
 

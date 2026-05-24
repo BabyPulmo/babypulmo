@@ -1,4 +1,4 @@
-# ShishuKantho — Deployment Runbook
+# Baby Pulmo — Deployment Runbook
 
 Step-by-step from a fresh machine to a working WhatsApp demo. Total time: ~6 hours active + ~2 hours Colab training (which runs unattended).
 
@@ -32,13 +32,13 @@ Step-by-step from a fresh machine to a working WhatsApp demo. Total time: ~6 hou
 2. Runtime → Change runtime type → T4 GPU
 3. Runtime → Run all
 4. Wait ~2 hours. While it runs, do the next steps (which don't need the model).
-5. When training finishes, download `shishukantho_wav2vec2.onnx` from Colab files.
+5. When training finishes, download `babypulmo_wav2vec2.onnx` from Colab files.
 
 ## Hour 2–3: Deploy classifier to Modal (after training finishes)
 
 ```bash
-cd shishukantho/colab
-mv ~/Downloads/shishukantho_wav2vec2.onnx ./
+cd babypulmo/colab
+mv ~/Downloads/babypulmo_wav2vec2.onnx ./
 pip install modal
 modal token new   # one-time auth
 modal deploy deploy_modal.py
@@ -46,12 +46,12 @@ modal deploy deploy_modal.py
 
 Modal prints a URL like:
 ```
-https://your-username--shishukantho-classify-endpoint.modal.run
+https://your-username--babypulmo-classify-endpoint.modal.run
 ```
 
 Test it:
 ```bash
-curl -X POST 'https://your-username--shishukantho-classify-endpoint.modal.run' \
+curl -X POST 'https://your-username--babypulmo-classify-endpoint.modal.run' \
   -H 'Content-Type: application/json' \
   -d '{"audio_url":"https://example.com/sample.wav"}'
 ```
@@ -59,7 +59,7 @@ curl -X POST 'https://your-username--shishukantho-classify-endpoint.modal.run' \
 ## Hour 4–5: Configure + deploy Next.js to Vercel
 
 ```bash
-cd shishukantho
+cd babypulmo
 cp .env.example .env.local
 # Fill in all the keys you collected in Hour 0–1
 ```
@@ -90,12 +90,12 @@ vercel env add OPENAI_API_KEY
 vercel --prod
 ```
 
-Note the production URL: `https://your-project.vercel.app`
+Note the production URL: `https://babypulmo.com`
 
 ## Hour 5: Wire Meta WhatsApp Cloud API
 
 1. Meta App Dashboard → your app → WhatsApp → Configuration → Webhook
-2. Callback URL: `https://your-project.vercel.app/api/webhook/whatsapp`
+2. Callback URL: `https://babypulmo.com/api/webhook/whatsapp`
 3. Verify Token: paste the same string you set as `WHATSAPP_VERIFY_TOKEN`
 4. Click "Verify and Save" — Meta sends a GET to your endpoint with `hub.challenge`; the route handler echoes it back
 5. Subscribe to the `messages` field

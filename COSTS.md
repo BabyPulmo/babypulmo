@@ -1,4 +1,4 @@
-# ShishuKantho — Per-call cost breakdown
+# Baby Pulmo — Per-call cost breakdown
 
 Per one user interaction = one 30-sec cough voice note → reply (with Bangla audio guidance).
 
@@ -59,7 +59,7 @@ All 4 optimizations are wired:
 - ✅ Stock-only Bangla — `lib/claude.ts` only exports `decideSeverity`; `lib/tts.ts` `STOCK_BANGLA` covers all 7 (class, severity) tuples; webhook never calls an LLM
 - ✅ GCP TTS — `lib/tts.ts` `synthesizeBangla()` uses `texttospeech.googleapis.com/v1/text:synthesize` with `bn-IN-Wavenet-A`; cache layer unchanged
 - ✅ Meta WhatsApp Cloud API direct — `lib/whatsapp.ts` handles signature verification + media download + send; webhook has GET (verification handshake) + POST (events) handlers
-- ✅ Int8 ONNX on Modal CPU — `colab/train_wav2vec2.py` step 10b runs `quantize_dynamic`; `colab/deploy_modal.py` loads `shishukantho_wav2vec2_int8.onnx` on a 2 vCPU / 2 GB CPU container
+- ✅ Int8 ONNX on Modal CPU — `colab/train_wav2vec2.py` step 10b runs `quantize_dynamic`; `colab/deploy_modal.py` loads `babypulmo_wav2vec2_int8.onnx` on a 2 vCPU / 2 GB CPU container
 
 ## Pre-warm step (after every deploy)
 

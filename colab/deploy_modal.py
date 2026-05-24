@@ -1,4 +1,4 @@
-"""ShishuKantho — Modal deployment for cough classifier ONNX model.
+"""Baby Pulmo — Modal deployment for cough classifier ONNX model.
 
 Run:
     pip install modal
@@ -6,14 +6,14 @@ Run:
     modal deploy deploy_modal.py
 
 This creates a serverless endpoint at:
-    https://<your-username>--shishukantho-classify.modal.run
+    https://<your-username>--babypulmo-classify.modal.run
 
 Update CLASSIFIER_ENDPOINT in your Vercel/Next.js .env.local with that URL.
 """
 
 import modal
 
-app = modal.App("shishukantho")
+app = modal.App("babypulmo")
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -25,8 +25,8 @@ image = (
         "matplotlib==3.9.2",
     )
     .copy_local_file(
-        "shishukantho_wav2vec2_int8.onnx",
-        "/model/shishukantho_wav2vec2.onnx",
+        "babypulmo_wav2vec2_int8.onnx",
+        "/model/babypulmo_wav2vec2.onnx",
     )
 )
 
@@ -57,7 +57,7 @@ class Classifier:
         opts.intra_op_num_threads = 2
         opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
         self.session = ort.InferenceSession(
-            "/model/shishukantho_wav2vec2.onnx",
+            "/model/babypulmo_wav2vec2.onnx",
             sess_options=opts,
             providers=["CPUExecutionProvider"],
         )

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ShishuKantho — AI Pediatric Cough Diagnostic",
+  title: "Baby Pulmo — AI Pediatric Cough Diagnostic",
   description:
     "Bangla voice-first WhatsApp AI that classifies pediatric respiratory disease from a 30-second cough recording. THE INFINITY AI BUILDFEST 2026.",
 };
@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-shishu-50 text-slate-900">{children}</body>
+      <body className="min-h-screen bg-pulmo-50 text-slate-900">{children}</body>
     </html>
   );
 }

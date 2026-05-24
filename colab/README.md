@@ -1,4 +1,4 @@
-# ShishuKantho — Training & Deployment
+# Baby Pulmo — Training & Deployment
 
 ## Training (Google Colab, ~2 hours on T4 GPU)
 
@@ -11,7 +11,7 @@
    ```
    Or copy/paste each `# %%` cell into a fresh notebook cell.
 4. Run all cells. Expect ~2 hours end-to-end.
-5. Download `shishukantho_wav2vec2.onnx` (~1.2 GB) to your local machine.
+5. Download `babypulmo_wav2vec2.onnx` (~1.2 GB) to your local machine.
 
 ## Deployment to Modal (serverless GPU/CPU inference)
 
@@ -23,7 +23,7 @@ pip install modal
 modal token new
 
 # Place your ONNX model next to deploy_modal.py
-mv ~/Downloads/shishukantho_wav2vec2.onnx ./
+mv ~/Downloads/babypulmo_wav2vec2.onnx ./
 
 # Deploy
 modal deploy deploy_modal.py
@@ -31,14 +31,14 @@ modal deploy deploy_modal.py
 
 Modal will print a URL like:
 ```
-https://your-username--shishukantho-classify-endpoint.modal.run
+https://your-username--babypulmo-classify-endpoint.modal.run
 ```
 
 ## Wire to the Next.js app
 
 Add to your `.env.local`:
 ```
-CLASSIFIER_ENDPOINT=https://your-username--shishukantho-classify-endpoint.modal.run
+CLASSIFIER_ENDPOINT=https://your-username--babypulmo-classify-endpoint.modal.run
 ```
 
 That's it — the WhatsApp webhook will now route cough recordings through your trained model.

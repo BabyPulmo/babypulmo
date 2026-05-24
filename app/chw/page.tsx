@@ -50,8 +50,8 @@ export default function ChwDashboard() {
   return (
     <main className="mx-auto max-w-5xl px-6 py-12">
       <header className="mb-8">
-        <p className="text-sm font-medium text-shishu-500">
-          ShishuKantho · CHW Dashboard
+        <p className="text-sm font-medium text-pulmo-500">
+          Baby Pulmo · CHW Dashboard
         </p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Live Alerts</h1>
         <p className="mt-1 text-slate-600">
@@ -67,7 +67,7 @@ export default function ChwDashboard() {
       {!loading && alerts.length === 0 && (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
           <p className="text-slate-500">
-            No alerts yet. Send a cough recording to the ShishuKantho WhatsApp
+            No alerts yet. Send a cough recording to the Baby Pulmo WhatsApp
             number to trigger one.
           </p>
         </div>
@@ -130,7 +130,7 @@ export default function ChwDashboard() {
 
       <footer className="mt-12 border-t pt-6 text-sm text-slate-500">
         <p>
-          ShishuKantho · CHWs in Bogura district receive WhatsApp alerts with
+          Baby Pulmo · CHWs in Bogura district receive WhatsApp alerts with
           attached audio when severity rules trigger escalation.
         </p>
       </footer>

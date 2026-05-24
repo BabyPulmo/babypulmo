@@ -21,7 +21,7 @@ export const maxDuration = 60;
 const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN!;
 
 const GREETING_BANGLA =
-  "Assalamu alaikum! Ami ShishuKantho. Apnar shishur cough-er 30 second voice record-kore amake pathan. Ami 10 second-er moddhe bole debo ki problem ache. (Disclaimer: Ei tothyo doctor-er bikolpo noy. Joruri obostha-ye 999 kol korun.)";
+  "Assalamu alaikum! Ami Baby Pulmo. Apnar shishur cough-er 30 second voice record-kore amake pathan. Ami 10 second-er moddhe bole debo ki problem ache. (Disclaimer: Ei tothyo doctor-er bikolpo noy. Joruri obostha-ye 999 kol korun.)";
 
 const ERROR_BANGLA =
   "Drukito ekti problem holo. Onugroho kore abar try korun. Joruri obostha-ye 999 kol korun.";
@@ -175,7 +175,7 @@ export async function POST(req: NextRequest) {
         });
 
         const chwMsg =
-          `🚨 ShishuKantho ALERT (${decision.severity.toUpperCase()})\n` +
+          `🚨 Baby Pulmo ALERT (${decision.severity.toUpperCase()})\n` +
           `Class: ${classification.class} · ${(classification.confidence * 100).toFixed(0)}% conf\n` +
           `Caregiver: ${from}\n` +
           `Recommended action: ${decision.recommendedAction}\n` +
@@ -242,5 +242,5 @@ function formatTextCard(
   severity: string
 ): string {
   const sev = severity.toUpperCase();
-  return `📋 ShishuKantho\n${sev}: ${c.class} (${(c.confidence * 100).toFixed(0)}% confidence)`;
+  return `📋 Baby Pulmo\n${sev}: ${c.class} (${(c.confidence * 100).toFixed(0)}% confidence)`;
 }

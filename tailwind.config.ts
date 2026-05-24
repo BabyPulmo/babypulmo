@@ -8,7 +8,7 @@ const config: Config = {
         bangla: ["Noto Sans Bengali", "sans-serif"]
       },
       colors: {
-        shishu: {
+        pulmo: {
           50: "#fef7ed",
           500: "#f97316",
           900: "#7c2d12"

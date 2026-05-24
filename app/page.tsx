@@ -2,16 +2,16 @@ export default function Home() {
   return (
     <main className="mx-auto max-w-3xl px-6 py-16">
       <header className="mb-12">
-        <p className="text-sm font-medium text-shishu-500">THE INFINITY AI BUILDFEST 2026 · HealthTech</p>
-        <h1 className="mt-2 text-5xl font-bold tracking-tight">ShishuKantho</h1>
-        <p className="bn mt-1 text-2xl text-shishu-900">শিশুকণ্ঠ — Child&apos;s Voice</p>
+        <p className="text-sm font-medium text-pulmo-500">THE INFINITY AI BUILDFEST 2026 · HealthTech</p>
+        <h1 className="mt-2 text-5xl font-bold tracking-tight">Baby Pulmo</h1>
+        <p className="bn mt-1 text-2xl text-pulmo-900">বেবি পুলমো — listening to your child&apos;s breath</p>
         <p className="mt-6 text-lg text-slate-700">
           A Bangla voice-first WhatsApp AI that listens to a child&apos;s cough and tells the mother, in
           her own language, whether her baby has pneumonia. In 10 seconds. For free.
         </p>
       </header>
 
-      <section className="mb-10 rounded-2xl border border-shishu-500/20 bg-white p-6 shadow-sm">
+      <section className="mb-10 rounded-2xl border border-pulmo-500/20 bg-white p-6 shadow-sm">
         <h2 className="text-2xl font-semibold">Try the demo</h2>
         <p className="mt-2 text-slate-700">
           Send a 30-second cough voice note to our WhatsApp number. You&apos;ll receive a Bangla audio reply
@@ -68,10 +68,10 @@ export default function Home() {
 
       <footer className="mt-16 border-t pt-6 text-sm text-slate-500">
         <p>
-          ShishuKantho · Built for THE INFINITY AI BUILDFEST 2026 · BRAC University, Dhaka · 12 June 2026
+          Baby Pulmo · Built for THE INFINITY AI BUILDFEST 2026 · BRAC University, Dhaka · 12 June 2026
         </p>
         <p className="mt-2">
-          <a className="underline hover:text-shishu-500" href="/chw">CHW dashboard →</a>
+          <a className="underline hover:text-pulmo-500" href="/chw">CHW dashboard →</a>
         </p>
       </footer>
     </main>
@@ -81,7 +81,7 @@ export default function Home() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="text-3xl font-bold text-shishu-500">{value}</p>
+      <p className="text-3xl font-bold text-pulmo-500">{value}</p>
       <p className="mt-1 text-sm text-slate-600">{label}</p>
     </div>
   );

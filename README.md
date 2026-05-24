@@ -1,6 +1,8 @@
-# ShishuKantho — AI Pediatric Cough Diagnostic
+# Baby Pulmo — AI Pediatric Cough Diagnostic
 
-> "Child's Voice" — Bangla voice-first WhatsApp AI that classifies pediatric respiratory disease from a 30-second cough recording.
+> Bangla voice-first WhatsApp AI that classifies pediatric respiratory disease from a 30-second cough recording.
+
+**Production:** https://babypulmo.com  •  **Repo:** https://github.com/Shishukantho/babypulmo
 
 THE INFINITY AI BUILDFEST 2026 — HealthTech Track — Preliminary submission due **2026-05-15**.
 
@@ -25,7 +27,7 @@ Deployment            Vercel + Supabase + Modal CPU + Google Cloud TTS
 
 ```bash
 # 1. Install
-cd shishukantho
+cd babypulmo
 npm install
 
 # 2. Copy env template and fill in keys (see .env.example)
@@ -61,7 +63,7 @@ See `DEPLOY.md`. Sign up for:
 ## Repo structure
 
 ```
-shishukantho/
+babypulmo/
 ├── app/
 │   ├── api/
 │   │   ├── webhook/whatsapp/route.ts   # Twilio WhatsApp ingress
@@ -89,7 +91,7 @@ shishukantho/
 
 ## Demo flow
 
-1. User sends a 30-sec cough voice note to the ShishuKantho WhatsApp number
+1. User sends a 30-sec cough voice note to the Baby Pulmo WhatsApp number
 2. Meta delivers a webhook to Vercel; signature verified via app-secret HMAC
 3. Webhook downloads audio from Meta Graph API, uploads to Supabase Storage
 4. Int8 ONNX classifier on Modal CPU returns `{class, confidence, heatmap}` (~5 sec)
@@ -121,4 +123,4 @@ shishukantho/
 
 ## License
 
-All ShishuKantho code is yours. Public datasets (Coswara, COUGHVID) used under their respective licenses. WHO IMCI content is public.
+All Baby Pulmo code is yours. Public datasets (Coswara, COUGHVID) used under their respective licenses. WHO IMCI content is public.
