@@ -5,6 +5,7 @@ import { retrieveImci } from "@/lib/rag";
 import { decideSeverity } from "@/lib/claude";
 import { getStockBangla, synthesizeBanglaCached } from "@/lib/tts";
 import { findNearestChw } from "@/lib/escalation";
+import { uploadCaregiverAudio, FileTooLargeError } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 import {
   verifyMetaSignature,
@@ -18,13 +19,16 @@ import type { ChildProfile } from "@/lib/types";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const VERIFY_TOKEN = process.env.WHATSAPP_VERIFY_TOKEN!;
+const VERIFY_TOKEN = process.env.META_WHATSAPP_VERIFY_TOKEN!;
 
 const GREETING_BANGLA =
   "Assalamu alaikum! Ami Baby Pulmo. Apnar shishur cough-er 30 second voice record-kore amake pathan. Ami 10 second-er moddhe bole debo ki problem ache. (Disclaimer: Ei tothyo doctor-er bikolpo noy. Joruri obostha-ye 999 kol korun.)";
 
 const ERROR_BANGLA =
   "Drukito ekti problem holo. Onugroho kore abar try korun. Joruri obostha-ye 999 kol korun.";
+
+const AUDIO_TOO_LARGE_BANGLA =
+  "Audio-ti onek boro (5MB-er beshi). Onugroho kore 30 second-er ekti choto cough record kore pathan.";
 
 // Default child profile when caregiver hasn't onboarded with age.
 // In production: ask the caregiver for child age before first classification.
@@ -45,8 +49,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   if (!verifyMetaSignature(rawBody, req.headers.get("x-hub-signature-256"))) {
+    console.warn("[whatsapp] signature REJECTED → 401");
     return new NextResponse("invalid signature", { status: 401 });
   }
+  console.log("[whatsapp] signature OK");
 
   let payload: unknown;
   try {
@@ -78,23 +84,16 @@ export async function POST(req: NextRequest) {
   try {
     // 1. Download voice note from Meta
     const { buffer: audioBuffer, mimeType } = await downloadMedia(msg.audio.id);
-    const audioExt = mimeType.includes("ogg") ? "ogg" : "mp3";
 
-    // 2. Upload to Supabase Storage
+    // 2. Upload to Supabase Storage (hashed per-caregiver path, 5MB guard,
+    //    short-lived signed URL — see lib/storage.ts).
     const recordingId = crypto.randomUUID();
-    const storagePath = `recordings/${recordingId}.${audioExt}`;
-    const uploadRes = await supabaseAdmin.storage
-      .from("recordings")
-      .upload(storagePath, audioBuffer, {
-        contentType: mimeType ?? "audio/ogg",
-        upsert: false
-      });
-    if (uploadRes.error) throw uploadRes.error;
-
-    const { data: signed } = await supabaseAdmin.storage
-      .from("recordings")
-      .createSignedUrl(storagePath, 3600);
-    const audioUrl = signed?.signedUrl ?? "";
+    const { storagePath, signedUrl: audioUrl } = await uploadCaregiverAudio({
+      buffer: audioBuffer,
+      mimeType,
+      caregiverPhone: from,
+      messageId: msg.id
+    });
 
     await supabaseAdmin.from("recordings").insert({
       id: recordingId,
@@ -203,6 +202,20 @@ export async function POST(req: NextRequest) {
 
     return new NextResponse("ok", { status: 200 });
   } catch (err) {
+    if (err instanceof FileTooLargeError) {
+      await audit({
+        eventType: "audio_too_large",
+        payload: { from, bytes: err.bytes },
+        caregiverId
+      });
+      try {
+        await sendText(from, AUDIO_TOO_LARGE_BANGLA);
+      } catch {
+        // swallow
+      }
+      return new NextResponse("ok", { status: 200 });
+    }
+
     const message = err instanceof Error ? err.message : String(err);
     console.error("[whatsapp webhook] error", err);
     await audit({

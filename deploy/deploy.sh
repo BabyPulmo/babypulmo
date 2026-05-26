@@ -26,6 +26,11 @@ PROFILE="${2:-}"
 
 COMPOSE="docker compose"
 
+# Deployed commit SHA, baked into the web image as a build ARG and surfaced by
+# /api/health. Resolves to the checked-out commit (GitHub Actions resets to it
+# before invoking this script); falls back to "unknown" outside a git checkout.
+export GIT_COMMIT_SHA="$(git -C .. rev-parse --short HEAD 2>/dev/null || echo unknown)"
+
 require_env_file() {
   if [ ! -f ".env.production" ]; then
     echo "✗ .env.production not found. Copy .env.production.example and fill values."

@@ -11,6 +11,7 @@ RUN npm ci
 # ─── Stage 2: build ───────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
+ARG GIT_COMMIT_SHA
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -22,6 +23,10 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Baked-in deployed commit SHA, surfaced by /api/health (ARGs don't cross stages).
+ARG GIT_COMMIT_SHA
+ENV GIT_COMMIT_SHA=$GIT_COMMIT_SHA
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs

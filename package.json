@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "smoke:embed": "node scripts/embed-retry-smoke.mjs",
+    "smoke:storage": "node scripts/storage-path-smoke.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

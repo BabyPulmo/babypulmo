@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
-const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!;
-const ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN!;
-const APP_SECRET = process.env.WHATSAPP_APP_SECRET!;
-const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION ?? "v21.0";
+const PHONE_NUMBER_ID = process.env.META_WHATSAPP_PHONE_NUMBER_ID!;
+const ACCESS_TOKEN = process.env.META_WHATSAPP_ACCESS_TOKEN!;
+const APP_SECRET = process.env.META_WHATSAPP_APP_SECRET!;
+const GRAPH_VERSION = process.env.META_WHATSAPP_GRAPH_VERSION ?? "v21.0";
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 export interface MetaMessage {

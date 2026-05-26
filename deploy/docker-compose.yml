@@ -21,6 +21,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.web
+      args:
+        GIT_COMMIT_SHA: "${GIT_COMMIT_SHA:-unknown}"
     image: babypulmo-web:latest
     container_name: babypulmo-web
     restart: unless-stopped
