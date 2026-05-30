@@ -1,92 +1,115 @@
+import Link from "next/link";
+import { StatTile } from "@/components/StatTile";
+import { StepCard } from "@/components/StepCard";
+
 export default function Home() {
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <header className="mb-12">
-        <p className="text-sm font-medium text-pulmo-500">THE INFINITY AI BUILDFEST 2026 · HealthTech</p>
-        <h1 className="mt-2 text-5xl font-bold tracking-tight">Baby Pulmo</h1>
-        <p className="bn mt-1 text-2xl text-pulmo-900">বেবি পুলমো — listening to your child&apos;s breath</p>
-        <p className="mt-6 text-lg text-slate-700">
-          A Bangla voice-first WhatsApp AI that listens to a child&apos;s cough and tells the mother, in
-          her own language, whether her baby has pneumonia. In 10 seconds. For free.
-        </p>
-      </header>
-
-      <section className="mb-10 rounded-2xl border border-pulmo-500/20 bg-white p-6 shadow-sm">
-        <h2 className="text-2xl font-semibold">Try the demo</h2>
-        <p className="mt-2 text-slate-700">
-          Send a 30-second cough voice note to our WhatsApp number. You&apos;ll receive a Bangla audio reply
-          in under 15 seconds with classification, confidence score, and recommended action.
-        </p>
-        <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3 font-mono text-sm">
-          WhatsApp: <span className="font-semibold">+1 415 523 8886</span>
-          <br />
-          Sandbox code: <span className="font-semibold">join &lt;your-code&gt;</span>
+    <>
+      {/* Hero */}
+      <section className="bg-white">
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-2 lg:py-24">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-pulmo-blue">
+              THE INFINITY AI BUILDFEST 2026 · HealthTech
+            </p>
+            <h1 className="mt-3 text-5xl font-bold leading-tight text-pulmo-deep">Baby Pulmo</h1>
+            <p className="bn font-bangla mt-2 text-2xl italic text-slate-600">
+            </p>
+            <p className="mt-6 text-lg text-slate-700">
+              AI Pediatric Diagnostic for Rural Bangladesh
+            </p>
+            <p className="mt-2 text-base text-slate-600">
+              Early detection. Timely guidance.
+              <br />
+              Healthier children, stronger communities.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/demo"
+                className="inline-flex items-center gap-2 rounded-lg bg-pulmo-blue px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-pulmo-medium"
+              >
+                ● Record Cough
+              </Link>
+              <Link
+                href="/demo"
+                className="inline-flex items-center gap-2 rounded-lg bg-pulmo-green px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+              >
+                ◇ Try WhatsApp
+              </Link>
+              <Link
+                href="/how-it-works"
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-pulmo-deep shadow-sm transition hover:border-pulmo-blue hover:text-pulmo-blue"
+              >
+                Learn How It Works →
+              </Link>
+            </div>
+            <div className="mt-10 grid grid-cols-2 gap-4 border-t border-slate-100 pt-6 md:grid-cols-4">
+              <StatTile icon="✓" label="WHO guided" sub="IMCI aligned" />
+              <StatTile icon="◎" label="Bangladesh focused" sub="DGHS protocols" />
+              <StatTile icon="♪" label="Bangla Voice Support" sub="Child & caregiver friendly" />
+              <StatTile icon="✿" label="AI Explainability" sub="Transparent & private" />
+            </div>
+          </div>
+          <div className="relative">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-gradient-to-br from-pulmo-blue/30 via-pulmo-green/20 to-pulmo-gold/30 shadow-xl">
+              <div className="absolute inset-0 flex items-end justify-center pb-8 text-center">
+                <p className="rounded-xl bg-white/80 px-4 py-3 text-xs text-slate-600 backdrop-blur">
+                  Mother-child hero illustration placeholder.
+                  <br />
+                  See <code className="font-mono">design.md §7</code>.
+                </p>
+              </div>
+            </div>
+            <div className="absolute right-6 top-6 flex items-center gap-2 rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-pulmo-deep shadow-md backdrop-blur">
+              <span className="h-2 w-2 rounded-full bg-pulmo-green" />
+              AI Analysis · 89% Confidence
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="mb-10 grid gap-4 md:grid-cols-3">
-        <Stat label="Children U5 dying / year from pneumonia (WHO)" value="740,000" />
-        <Stat label="Bangladesh: 1 doctor per" value="8,000 rural" />
-        <Stat label="Pfizer paid for adult cough AI (ResApp, 2022)" value="$120M" />
+      {/* How it works */}
+      <section className="bg-pulmo-surface">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <h2 className="text-center text-3xl font-bold tracking-tight text-pulmo-deep">HOW IT WORKS</h2>
+          <div className="mx-auto mt-2 h-1 w-12 rounded-full bg-pulmo-blue" />
+          <div className="mt-12 grid gap-8 md:grid-cols-3 lg:grid-cols-6">
+            <StepCard number={1} icon="●" title="Record Cough" body="Caregiver records child's cough via WhatsApp in Bangla." accent="blue" />
+            <StepCard number={2} icon="≋" title="Audio Preprocessing" body="AI removes noise, segments cough, checks audio quality." accent="medium" />
+            <StepCard number={3} icon="⌖" title="AI Respiratory Analysis" body="Wav2Vec2-XLSR-53 analyzes patterns from thousands of samples." accent="green" />
+            <StepCard number={4} icon="●" title="Severity Detection" body="Six-class pediatric classification with confidence scores." accent="gold" />
+            <StepCard number={5} icon="◫" title="Medical Knowledge Retrieval" body="RAG retrieves WHO IMCI & DGHS protocols for predicted condition." accent="blue" />
+            <StepCard number={6} icon="◐" title="Guidance & Referral" body="Bangla audio guidance & alert sent to nearest health worker." accent="green" />
+          </div>
+        </div>
       </section>
 
-      <section className="mb-10">
-        <h2 className="text-2xl font-semibold">How it works</h2>
-        <ol className="mt-4 space-y-3 text-slate-700">
-          <li>
-            <span className="font-semibold">1.</span> Mother holds phone near coughing child, records 30 seconds
-            on WhatsApp.
-          </li>
-          <li>
-            <span className="font-semibold">2.</span> Wav2Vec2 (fine-tuned on the pediatric subset of Coswara
-            + COUGHVID + ICBHI) classifies the cough into 6 categories (healthy / common_cold / bronchiolitis /
-            pneumonia / asthma / croup) with confidence + Grad-CAM heatmap + auto-measured respiratory rate.
-            Optional second modality: TorchXrayVision DenseNet121 on a smartphone-photographed chest X-ray.
-          </li>
-          <li>
-            <span className="font-semibold">3.</span> Contextual + Hybrid RAG retrieves matching WHO IMCI /
-            DGHS protocol passages with a Cohere multilingual reranker.
-          </li>
-          <li>
-            <span className="font-semibold">4.</span> Deterministic multi-modal severity decision
-            (CXR override → tachypnea override → audio_class) outputs a clinician-vetted Bangla stock script —
-            no LLM at runtime.
-          </li>
-          <li>
-            <span className="font-semibold">5.</span> Severity ≥ high triggers automatic CHW alert with
-            audio attached and GPS location via PostGIS geo-routing.
-          </li>
-        </ol>
+      {/* Trust + CTA bar */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-16">
+          <div className="rounded-2xl bg-pulmo-blue px-8 py-10 text-white shadow-md sm:px-12">
+            <h3 className="text-2xl font-semibold">Empowering health workers with AI precision.</h3>
+            <p className="mt-2 max-w-2xl text-white/80">
+              Our technology is designed for the frontlines of rural healthcare, providing immediate,
+              actionable insights where they are needed most.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/technology"
+                className="rounded-lg bg-white px-5 py-2.5 text-sm font-semibold text-pulmo-blue shadow-sm transition hover:bg-slate-100"
+              >
+                View Technology Whitepaper
+              </Link>
+              <Link
+                href="/impact"
+                className="rounded-lg border border-white/40 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10"
+              >
+                Request Field Study Data
+              </Link>
+            </div>
+          </div>
+        </div>
       </section>
-
-      <section className="mb-10">
-        <h2 className="text-2xl font-semibold">Responsible AI</h2>
-        <ul className="mt-4 list-disc space-y-2 pl-5 text-slate-700">
-          <li>Decision support, not a diagnostic device.</li>
-          <li>Rules-gated severity (deterministic), not LLM discretion.</li>
-          <li>Mandatory human-in-loop on every red-flag escalation.</li>
-          <li>Grad-CAM spectrogram explainability on every classification.</li>
-          <li>WHO IMCI alignment + BMRC ethics review path.</li>
-        </ul>
-      </section>
-
-      <footer className="mt-16 border-t pt-6 text-sm text-slate-500">
-        <p>
-          Baby Pulmo · Built for THE INFINITY AI BUILDFEST 2026 · BRAC University, Dhaka · 12 June 2026
-        </p>
-        <p className="mt-2">
-          <a className="underline hover:text-pulmo-500" href="/chw">CHW dashboard →</a>
-        </p>
-      </footer>
-    </main>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <p className="text-3xl font-bold text-pulmo-500">{value}</p>
-      <p className="mt-1 text-sm text-slate-600">{label}</p>
-    </div>
+    </>
   );
 }
