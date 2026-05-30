@@ -24,7 +24,7 @@ sudo apt install -y certbot python3-certbot-nginx jq git
 
 ---
 
-## 1. Clone repo + create env file (~10 min)
+## 1. Clone repo on VPS (~5 min)
 
 ```bash
 # Create app directory
@@ -33,39 +33,63 @@ cd /opt/babypulmo
 
 # Clone main repo
 git clone https://github.com/BabyPulmo/babypulmo.git .
-
-# Clone the private clinical-content repo (needs your SSH key on this VPS
-# and that key registered to your GitHub account)
-git clone git@github.com:BabyPulmo/clinical-content.git ~/clinical-content
-
-# Copy env template
-cd /opt/babypulmo/deploy
-cp .env.production.example .env.production
-
-# Fill values — see "Env vars cheatsheet" below
-nano .env.production
-
-# Inject clinical JSON as single-line env strings
-STOCK_BANGLA_JSON=$(jq -c . ~/clinical-content/stock-bangla.json)
-SEVERITY_RULES_JSON=$(jq -c . ~/clinical-content/severity-rules.json)
-
-sed -i \
-  -e "s|^STOCK_BANGLA_JSON=.*|STOCK_BANGLA_JSON=${STOCK_BANGLA_JSON}|" \
-  -e "s|^SEVERITY_RULES_JSON=.*|SEVERITY_RULES_JSON=${SEVERITY_RULES_JSON}|" \
-  .env.production
 ```
 
-### Env vars cheatsheet — where to get each
+**Do not create `.env.production` on the VPS.** It's regenerated automatically on every deploy. See "Environment variables" below.
 
-| Var | Where to get |
+---
+
+## Environment variables — GitHub Secrets = source of truth
+
+The previous flow ("copy `.env.production.example` to `.env.production`, fill values, never commit") is **deprecated**. Current flow:
+
+| Environment | Source of truth | File |
+|---|---|---|
+| **Local dev** | Your machine | `.env.local` at repo root (gitignored) |
+| **Production VPS** | GitHub Secrets on `BabyPulmo/babypulmo` | `/opt/babypulmo/deploy/.env.production` — regenerated every deploy |
+
+Every push to `main` triggers `.github/workflows/deploy.yml` which:
+1. SSHes into the VPS as `${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}` using `${{ secrets.VPS_SSH_KEY }}`.
+2. `git fetch && git reset --hard origin/main` in `/opt/babypulmo`.
+3. Writes `/opt/babypulmo/deploy/.env.production` from injected GitHub Secrets via heredoc.
+4. Runs `./deploy.sh update`.
+
+**Never edit `/opt/babypulmo/deploy/.env.production` on the VPS** — the next deploy wipes it.
+
+### Required GH Secrets — SSH access (3)
+
+- `VPS_HOST` — e.g. `vps.babypulmo.com` (or the IP).
+- `VPS_USER` — deploy user, e.g. `deploy`.
+- `VPS_SSH_KEY` — full PEM-encoded private key. Public key half goes in `~deploy/.ssh/authorized_keys` on the VPS.
+- *(Optional)* `VPS_PORT` — defaults to 22 if unset.
+
+### Required GH Secrets — app env vars
+
+| Secret | Where to get |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL`, `*_ANON_KEY`, `SERVICE_ROLE_KEY` | Supabase dashboard → Project Settings → API |
-| `META_WHATSAPP_*` | Meta for Developers → WhatsApp → API Setup (sandbox tokens for Phase 1) |
-| `GCP_TTS_API_KEY` | Google Cloud Console → APIs → Credentials → Create API key (restrict to Text-to-Speech API) |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_URL` | Supabase dashboard → Project Settings → API |
+| `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_GRAPH_VERSION` | Meta for Developers → WhatsApp → API Setup |
+| `GCP_TTS_API_KEY`, `GCP_TTS_VOICE`, `TTS_CACHE_BUCKET` | Google Cloud Console → APIs → Credentials |
+| `CLASSIFIER_ENDPOINT`, `CLASSIFIER_API_KEY` | Modal endpoint URL + key |
 | `OPENAI_API_KEY` | platform.openai.com → API Keys |
-| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys (only used during Phase 2 IMCI ingest, not runtime) |
-| `STOCK_BANGLA_JSON`, `SEVERITY_RULES_JSON` | From private `clinical-content` repo (script above) |
-| `CLASSIFIER_ENDPOINT` | Leave empty for Phase 1 (web's mock fallback active) |
+| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys (build-time IMCI ingest only) |
+| `STOCK_BANGLA_JSON`, `SEVERITY_RULES_JSON` | From private `BabyPulmo/clinical-content` repo — single-line JSON via `jq -c .` |
+| `CXR_ENDPOINT`, `CXR_API_KEY` *(Phase 3)* | Modal CXR endpoint |
+| `WHISPER_ENDPOINT`, `WHISPER_API_KEY` *(Phase 3)* | Modal Whisper endpoint |
+| `COHERE_API_KEY` *(Phase 2)* | dashboard.cohere.com → API Keys |
+| `AUDIT_PARQUET_BUCKET` | Supabase Storage bucket name (defaults to `lakehouse`) |
+
+### Bulk-load from local `.env.local`
+
+```bash
+# Mask the file from any commit first — .env.local is in .gitignore but verify
+git -C ~/path/to/babypulmo check-ignore .env.local || echo "⚠ NOT gitignored!"
+
+# Then bulk-load:
+gh secret set --repo BabyPulmo/babypulmo --env-file .env.local
+```
+
+`gh` skips empty values and obeys `# comments` in the file.
 
 ---
 
@@ -174,18 +198,18 @@ Open https://babypulmo.com in a browser. Verify SSL padlock + landing renders + 
 
 ---
 
-## 7. Subsequent deploys — auto via GitHub Actions self-hosted runner
+## 7. Subsequent deploys — auto via GitHub Actions (SSH-based)
 
-After the one-time runner setup (see `RUNNER-SETUP.md`), **every push to `main` auto-deploys**. No SSH needed. Workflow lives at `.github/workflows/deploy.yml`.
+**Every push to `main` auto-deploys.** No self-hosted runner needed — workflow runs on `ubuntu-latest`, SSHes into the VPS via `appleboy/ssh-action`, regenerates `.env.production` from GitHub Secrets, then runs `./deploy.sh update`. Workflow at `.github/workflows/deploy.yml`. (`RUNNER-SETUP.md` is deprecated as of 2026-05-30 — kept for historical reference only.)
 
 For manual triggers:
 ```bash
-gh workflow run deploy.yml -f mode=update           # rebuild + restart
-gh workflow run deploy.yml -f mode=reload-clinical  # after a Dr. Saadi script edit
-gh workflow run deploy.yml -f mode=up-phase2        # after model upload
+gh workflow run "Deploy to VPS" -R BabyPulmo/babypulmo -f mode=update
+gh workflow run "Deploy to VPS" -R BabyPulmo/babypulmo -f mode=reload-clinical
+gh workflow run "Deploy to VPS" -R BabyPulmo/babypulmo -f mode=up-phase2
 ```
 
-The legacy SSH path still works as a fallback if the runner is down:
+The legacy direct-SSH path still works as a manual fallback if Actions are down:
 
 
 
