@@ -49,19 +49,14 @@ The previous flow ("copy `.env.production.example` to `.env.production`, fill va
 | **Production VPS** | GitHub Secrets on `BabyPulmo/babypulmo` | `/opt/babypulmo/deploy/.env.production` — regenerated every deploy |
 
 Every push to `main` triggers `.github/workflows/deploy.yml` which:
-1. SSHes into the VPS as `${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}` using `${{ secrets.VPS_SSH_KEY }}`.
+1. The `babypulmo`-tagged self-hosted runner on the VPS picks up the job.
 2. `git fetch && git reset --hard origin/main` in `/opt/babypulmo`.
 3. Writes `/opt/babypulmo/deploy/.env.production` from injected GitHub Secrets via heredoc.
 4. Runs `./deploy.sh update`.
 
 **Never edit `/opt/babypulmo/deploy/.env.production` on the VPS** — the next deploy wipes it.
 
-### Required GH Secrets — SSH access (3)
-
-- `VPS_HOST` — e.g. `vps.babypulmo.com` (or the IP).
-- `VPS_USER` — deploy user, e.g. `deploy`.
-- `VPS_SSH_KEY` — full PEM-encoded private key. Public key half goes in `~deploy/.ssh/authorized_keys` on the VPS.
-- *(Optional)* `VPS_PORT` — defaults to 22 if unset.
+Runner registration is a one-time VPS-side step. See `RUNNER-SETUP.md`.
 
 ### Required GH Secrets — app env vars
 
@@ -198,9 +193,9 @@ Open https://babypulmo.com in a browser. Verify SSL padlock + landing renders + 
 
 ---
 
-## 7. Subsequent deploys — auto via GitHub Actions (SSH-based)
+## 7. Subsequent deploys — auto via GitHub Actions self-hosted runner
 
-**Every push to `main` auto-deploys.** No self-hosted runner needed — workflow runs on `ubuntu-latest`, SSHes into the VPS via `appleboy/ssh-action`, regenerates `.env.production` from GitHub Secrets, then runs `./deploy.sh update`. Workflow at `.github/workflows/deploy.yml`. (`RUNNER-SETUP.md` is deprecated as of 2026-05-30 — kept for historical reference only.)
+After the one-time runner setup (see `RUNNER-SETUP.md`), **every push to `main` auto-deploys**. The `babypulmo`-tagged self-hosted runner on the VPS picks up the job, regenerates `/opt/babypulmo/deploy/.env.production` from GitHub Secrets, then runs `./deploy.sh update`. Workflow at `.github/workflows/deploy.yml`.
 
 For manual triggers:
 ```bash
@@ -209,7 +204,7 @@ gh workflow run "Deploy to VPS" -R BabyPulmo/babypulmo -f mode=reload-clinical
 gh workflow run "Deploy to VPS" -R BabyPulmo/babypulmo -f mode=up-phase2
 ```
 
-The legacy direct-SSH path still works as a manual fallback if Actions are down:
+The legacy direct-SSH path still works as a manual fallback if the runner is down:
 
 
 
