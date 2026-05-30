@@ -1,0 +1,27 @@
+# Cursor rules for Baby Pulmo
+
+You are working on Baby Pulmo, a Next.js 14 healthcare app — WhatsApp-native AI for pediatric pneumonia screening in rural Bangladesh.
+
+## Non-negotiable rule
+
+**Never propose adding a runtime LLM call in the caregiver-facing path** (webhook → classifier → reply). Severity decisions are deterministic in `lib/claude.ts::decideSeverityMultiModal`. Bangla audio is served from the clinician-vetted stock library in `lib/tts.ts::STOCK_BANGLA`. This is the BMRC ethics review claim.
+
+See `ARCHITECTURE.md` §3 for the carve-out describing where LLMs ARE allowed: build-time, one-shot ingest, CHW-side investigation, partner MCP, federated learning, CXR vision (DenseNet121, not an LLM).
+
+## Style
+
+- TypeScript strict mode. No `any`.
+- Tailwind for styling. No other CSS systems.
+- Prefer existing helpers in `lib/` over re-implementing.
+- Use `process.env.*` per `.env.example`. Don't introduce new env vars without updating `.env.example`.
+- Imports: relative for same-directory, absolute (`@/`) for cross-directory.
+
+## File-path discipline
+
+Every claim cites a file path. Before adding a TODO or claim "we have X", grep to confirm.
+
+## Read for context
+
+- `CLAUDE.md` — canonical project context.
+- `ARCHITECTURE.md` — 8-layer system + §3 LLM carve-out.
+- `memory-bank/` — Cline Memory Bank (6 files).
