@@ -1,12 +1,12 @@
 name: Deploy to VPS
 
-# Deploys on every push to main, or manually via Actions → Run workflow.
-# Uses a GitHub-hosted ubuntu-latest runner (no self-hosted runner needed).
-# SSHes into the VPS, regenerates /opt/babypulmo/deploy/.env.production
-# from GitHub Secrets, then runs ./deploy.sh.
+# Auto-deploys to the babypulmo-tagged self-hosted runner on every push to main.
+# Manually triggerable via the Actions tab → Deploy to VPS → Run workflow.
 #
-# Source of truth for production secrets is GitHub Secrets.
-# See deploy/DEPLOY-VPS.md "Environment variables" section.
+# Runner registration: see deploy/RUNNER-SETUP.md.
+# Secrets source of truth: GitHub Secrets on BabyPulmo/babypulmo.
+# The runner regenerates /opt/babypulmo/deploy/.env.production from those
+# secrets on every deploy — never edit that file by hand on the VPS.
 
 on:
   push:
@@ -36,9 +36,36 @@ concurrency:
 
 jobs:
   deploy:
-    name: SSH deploy
-    runs-on: ubuntu-latest
+    name: Pull + rebuild + smoke-test
+    runs-on: [self-hosted, babypulmo]
     timeout-minutes: 20
+
+    env:
+      MODE: ${{ github.event.inputs.mode || 'update' }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      WHATSAPP_APP_SECRET: ${{ secrets.WHATSAPP_APP_SECRET }}
+      WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
+      WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
+      WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
+      WHATSAPP_GRAPH_VERSION: ${{ secrets.WHATSAPP_GRAPH_VERSION }}
+      GCP_TTS_API_KEY: ${{ secrets.GCP_TTS_API_KEY }}
+      GCP_TTS_VOICE: ${{ secrets.GCP_TTS_VOICE }}
+      TTS_CACHE_BUCKET: ${{ secrets.TTS_CACHE_BUCKET }}
+      CLASSIFIER_ENDPOINT: ${{ secrets.CLASSIFIER_ENDPOINT }}
+      CLASSIFIER_API_KEY: ${{ secrets.CLASSIFIER_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      STOCK_BANGLA_JSON: ${{ secrets.STOCK_BANGLA_JSON }}
+      SEVERITY_RULES_JSON: ${{ secrets.SEVERITY_RULES_JSON }}
+      CXR_ENDPOINT: ${{ secrets.CXR_ENDPOINT }}
+      CXR_API_KEY: ${{ secrets.CXR_API_KEY }}
+      WHISPER_ENDPOINT: ${{ secrets.WHISPER_ENDPOINT }}
+      WHISPER_API_KEY: ${{ secrets.WHISPER_API_KEY }}
+      COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+      AUDIT_PARQUET_BUCKET: ${{ secrets.AUDIT_PARQUET_BUCKET }}
 
     steps:
       - name: Show context
@@ -46,115 +73,90 @@ jobs:
           echo "Triggered by: ${{ github.event_name }}"
           echo "Commit:       ${{ github.sha }}"
           echo "Ref:          ${{ github.ref }}"
-          echo "Mode:         ${{ github.event.inputs.mode || 'update' }}"
+          echo "Runner:       ${{ runner.name }}"
+          echo "Mode:         ${MODE}"
 
-      - name: SSH + regenerate env + deploy
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          MODE: ${{ github.event.inputs.mode || 'update' }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          WHATSAPP_APP_SECRET: ${{ secrets.WHATSAPP_APP_SECRET }}
-          WHATSAPP_VERIFY_TOKEN: ${{ secrets.WHATSAPP_VERIFY_TOKEN }}
-          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN }}
-          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
-          WHATSAPP_GRAPH_VERSION: ${{ secrets.WHATSAPP_GRAPH_VERSION }}
-          GCP_TTS_API_KEY: ${{ secrets.GCP_TTS_API_KEY }}
-          GCP_TTS_VOICE: ${{ secrets.GCP_TTS_VOICE }}
-          TTS_CACHE_BUCKET: ${{ secrets.TTS_CACHE_BUCKET }}
-          CLASSIFIER_ENDPOINT: ${{ secrets.CLASSIFIER_ENDPOINT }}
-          CLASSIFIER_API_KEY: ${{ secrets.CLASSIFIER_API_KEY }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          STOCK_BANGLA_JSON: ${{ secrets.STOCK_BANGLA_JSON }}
-          SEVERITY_RULES_JSON: ${{ secrets.SEVERITY_RULES_JSON }}
-          CXR_ENDPOINT: ${{ secrets.CXR_ENDPOINT }}
-          CXR_API_KEY: ${{ secrets.CXR_API_KEY }}
-          WHISPER_ENDPOINT: ${{ secrets.WHISPER_ENDPOINT }}
-          WHISPER_API_KEY: ${{ secrets.WHISPER_API_KEY }}
-          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
-          AUDIT_PARQUET_BUCKET: ${{ secrets.AUDIT_PARQUET_BUCKET }}
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
-          envs: |
-            MODE,NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,SUPABASE_SERVICE_ROLE_KEY,SUPABASE_URL,
-            WHATSAPP_APP_SECRET,WHATSAPP_VERIFY_TOKEN,WHATSAPP_ACCESS_TOKEN,WHATSAPP_PHONE_NUMBER_ID,WHATSAPP_GRAPH_VERSION,
-            GCP_TTS_API_KEY,GCP_TTS_VOICE,TTS_CACHE_BUCKET,
-            CLASSIFIER_ENDPOINT,CLASSIFIER_API_KEY,
-            OPENAI_API_KEY,ANTHROPIC_API_KEY,
-            STOCK_BANGLA_JSON,SEVERITY_RULES_JSON,
-            CXR_ENDPOINT,CXR_API_KEY,WHISPER_ENDPOINT,WHISPER_API_KEY,COHERE_API_KEY,AUDIT_PARQUET_BUCKET
-          script: |
-            set -euo pipefail
-
-            cd /opt/babypulmo
-            echo "→ Pulling latest code"
-            git fetch --prune origin main
-            git reset --hard origin/main
-            git log -1 --oneline
-
-            echo "→ Regenerating .env.production from GitHub Secrets"
-            ENVFILE=/opt/babypulmo/deploy/.env.production
-            umask 077
-            cat > "$ENVFILE" <<ENVEOF
-            # GENERATED BY .github/workflows/deploy.yml — DO NOT EDIT ON VPS.
-            # Source of truth: GitHub Secrets on BabyPulmo/babypulmo.
-            # This file is overwritten on every deploy.
-            NODE_ENV=production
-            NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-            SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-            SUPABASE_URL=${SUPABASE_URL}
-            WHATSAPP_APP_SECRET=${WHATSAPP_APP_SECRET}
-            WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN}
-            WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
-            WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
-            WHATSAPP_GRAPH_VERSION=${WHATSAPP_GRAPH_VERSION}
-            GCP_TTS_API_KEY=${GCP_TTS_API_KEY}
-            GCP_TTS_VOICE=${GCP_TTS_VOICE}
-            TTS_CACHE_BUCKET=${TTS_CACHE_BUCKET}
-            CLASSIFIER_ENDPOINT=${CLASSIFIER_ENDPOINT}
-            CLASSIFIER_API_KEY=${CLASSIFIER_API_KEY}
-            OPENAI_API_KEY=${OPENAI_API_KEY}
-            ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-            STOCK_BANGLA_JSON=${STOCK_BANGLA_JSON}
-            SEVERITY_RULES_JSON=${SEVERITY_RULES_JSON}
-            CXR_ENDPOINT=${CXR_ENDPOINT}
-            CXR_API_KEY=${CXR_API_KEY}
-            WHISPER_ENDPOINT=${WHISPER_ENDPOINT}
-            WHISPER_API_KEY=${WHISPER_API_KEY}
-            COHERE_API_KEY=${COHERE_API_KEY}
-            AUDIT_PARQUET_BUCKET=${AUDIT_PARQUET_BUCKET}
-            ENVEOF
-            chmod 600 "$ENVFILE"
-
-            echo "→ Running deploy.sh ${MODE}"
-            cd /opt/babypulmo/deploy
-            case "${MODE}" in
-              update)          ./deploy.sh update ;;
-              up)              ./deploy.sh up ;;
-              up-phase2)       ./deploy.sh up phase2 ;;
-              reload-clinical) ./deploy.sh reload-clinical ;;
-              *)               echo "Unknown mode: ${MODE}"; exit 1 ;;
-            esac
-
-            echo "→ Container status"
-            docker compose -f /opt/babypulmo/deploy/docker-compose.yml ps
-
-      - name: External healthcheck (best-effort)
+      - name: Pull latest code
+        working-directory: /opt/babypulmo
         run: |
-          # Soft-fail before DNS / cert configured; hard-success once live.
+          git fetch --prune origin main
+          git reset --hard origin/main
+          git log -1 --oneline
+
+      - name: Regenerate .env.production from GitHub Secrets
+        run: |
+          set -euo pipefail
+          ENVFILE=/opt/babypulmo/deploy/.env.production
+          umask 077
+          cat > "$ENVFILE" <<ENVEOF
+          # GENERATED BY .github/workflows/deploy.yml — DO NOT EDIT ON VPS.
+          # Source of truth: GitHub Secrets on BabyPulmo/babypulmo.
+          # This file is overwritten on every deploy.
+          NODE_ENV=production
+          NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+          SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+          SUPABASE_URL=${SUPABASE_URL}
+          WHATSAPP_APP_SECRET=${WHATSAPP_APP_SECRET}
+          WHATSAPP_VERIFY_TOKEN=${WHATSAPP_VERIFY_TOKEN}
+          WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
+          WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
+          WHATSAPP_GRAPH_VERSION=${WHATSAPP_GRAPH_VERSION}
+          GCP_TTS_API_KEY=${GCP_TTS_API_KEY}
+          GCP_TTS_VOICE=${GCP_TTS_VOICE}
+          TTS_CACHE_BUCKET=${TTS_CACHE_BUCKET}
+          CLASSIFIER_ENDPOINT=${CLASSIFIER_ENDPOINT}
+          CLASSIFIER_API_KEY=${CLASSIFIER_API_KEY}
+          OPENAI_API_KEY=${OPENAI_API_KEY}
+          ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+          STOCK_BANGLA_JSON=${STOCK_BANGLA_JSON}
+          SEVERITY_RULES_JSON=${SEVERITY_RULES_JSON}
+          CXR_ENDPOINT=${CXR_ENDPOINT}
+          CXR_API_KEY=${CXR_API_KEY}
+          WHISPER_ENDPOINT=${WHISPER_ENDPOINT}
+          WHISPER_API_KEY=${WHISPER_API_KEY}
+          COHERE_API_KEY=${COHERE_API_KEY}
+          AUDIT_PARQUET_BUCKET=${AUDIT_PARQUET_BUCKET}
+          ENVEOF
+          chmod 600 "$ENVFILE"
+          echo "→ .env.production regenerated ($(wc -l < "$ENVFILE") lines)"
+
+      - name: Run deploy.sh
+        working-directory: /opt/babypulmo/deploy
+        run: |
+          case "${MODE}" in
+            update)          ./deploy.sh update ;;
+            up)              ./deploy.sh up ;;
+            up-phase2)       ./deploy.sh up phase2 ;;
+            reload-clinical) ./deploy.sh reload-clinical ;;
+            *)               echo "Unknown mode: ${MODE}"; exit 1 ;;
+          esac
+
+      - name: Wait for healthcheck
+        run: |
           for i in 1 2 3 4 5 6 7 8 9 10; do
-            if curl -sf -o /dev/null -w "https://babypulmo.com → HTTP %{http_code}\n" https://babypulmo.com; then
-              echo "✓ External HTTPS reachable"
-              exit 0
+            if curl -sf http://127.0.0.1:3010/api/health > /dev/null 2>&1; then
+              echo "✓ /api/health responding"
+              curl -s http://127.0.0.1:3010/api/health | head -3
+              break
+            elif curl -sf http://127.0.0.1:3010/ > /dev/null 2>&1; then
+              echo "✓ landing responding (no /api/health route yet)"
+              break
             fi
-            echo "  ($i/10) waiting…"
+            echo "  ($i/10) waiting for web container..."
             sleep 6
           done
-          echo "⚠ External HTTPS not reachable (DNS / cert may still be configuring — check VPS host nginx)"
+          docker compose -f /opt/babypulmo/deploy/docker-compose.yml ps
+
+      - name: External reachability (best-effort)
+        run: |
+          if curl -sf -o /dev/null -w "https://babypulmo.com → HTTP %{http_code}\n" https://babypulmo.com; then
+            echo "✓ External HTTPS reachable"
+          else
+            echo "⚠ External HTTPS not yet reachable (DNS / cert not configured yet — fine for early days)"
+          fi
+
+      - name: Show recent web container logs
+        if: always()
+        working-directory: /opt/babypulmo/deploy
+        run: docker compose logs --tail=30 web 2>&1 || true
