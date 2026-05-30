@@ -1,5 +1,14 @@
 # Baby Pulmo — GitHub self-hosted runner setup
 
+> **⚠ DEPRECATED 2026-05-30.** We no longer use a self-hosted runner.
+>
+> The current deploy workflow uses `runs-on: ubuntu-latest` + SSH to the VPS via
+> `appleboy/ssh-action`. Source of truth for production secrets is GitHub Secrets
+> on `BabyPulmo/babypulmo`, not a VPS-side `.env.production` file.
+>
+> See `.github/workflows/deploy.yml` and `DEPLOY-VPS.md` "Environment variables"
+> for the current model. This document is retained as historical reference only.
+
 > Same pattern as your existing 5 Fintant runners on `vmi2956989`.
 > Time budget: ~10 minutes once GitHub gives you the registration token.
 
