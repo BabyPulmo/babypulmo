@@ -1,0 +1,27 @@
+# Cline rules for Baby Pulmo
+
+You are working on Baby Pulmo — WhatsApp-native AI for pediatric pneumonia screening in rural Bangladesh (Next.js 14 + Supabase + Modal + GCP TTS + Wav2Vec2).
+
+## Memory Bank
+
+At the start of every task, read all files in `memory-bank/`:
+- `projectbrief.md` — what Baby Pulmo is, who for, success criteria.
+- `productContext.md` — the problem, why this stack, regulatory framing.
+- `systemPatterns.md` — architecture + §3 LLM carve-out + override precedence.
+- `techContext.md` — stack, build commands, deploy.
+- `activeContext.md` — what's in flight right now.
+- `progress.md` — phase status.
+
+After reading the Memory Bank, also read `CLAUDE.md` and `ARCHITECTURE.md` for the canonical context.
+
+## Non-negotiable rule
+
+**Never add a runtime LLM call in the caregiver-facing path.** Severity is deterministic (`lib/claude.ts::decideSeverityMultiModal`). Bangla audio is clinician-vetted stock library (`lib/tts.ts::STOCK_BANGLA`). LLMs ARE allowed in the §3 ARCHITECTURE.md carve-out boundaries only (build-time, one-shot ingest, CHW-side, partner MCP, federated, CXR vision).
+
+## File-path discipline
+
+Every claim cites a file path. `grep` to confirm before claiming.
+
+## Style
+
+TypeScript strict, no `any`. Tailwind only. Prefer existing helpers in `lib/`. Update `.env.example` whenever introducing a new env var.
