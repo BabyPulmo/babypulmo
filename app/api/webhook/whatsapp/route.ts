@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { classifyCough } from "@/lib/classifier";
 import { retrieveImci } from "@/lib/rag";
-import { decideSeverity } from "@/lib/claude";
+import { decideSeverityMultiModal } from "@/lib/claude";
 import { getStockBangla, synthesizeBanglaCached } from "@/lib/tts";
 import { findNearestChw } from "@/lib/escalation";
 import { audit } from "@/lib/audit";
+import { classifyCxr } from "@/lib/cxr-vision";
+import { transcribeBangla, parseBanglaAgeYears } from "@/lib/whisper";
 import {
   verifyMetaSignature,
   extractMessages,
@@ -13,7 +15,7 @@ import {
   sendText,
   sendAudio
 } from "@/lib/whatsapp";
-import type { ChildProfile } from "@/lib/types";
+import type { ChildProfile, CxrSignal } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -26,8 +28,11 @@ const GREETING_BANGLA =
 const ERROR_BANGLA =
   "Drukito ekti problem holo. Onugroho kore abar try korun. Joruri obostha-ye 999 kol korun.";
 
-// Default child profile when caregiver hasn't onboarded with age.
-// In production: ask the caregiver for child age before first classification.
+// Default child profile when caregiver hasn't completed the Q&A onboarding
+// flow. Real caregivers go through a 3-message WhatsApp Q&A on first contact
+// (age, sex, days of cough, fever yes/no) and the answers are stored in
+// caregivers.child_profile_json. loadChildProfile() returns this default
+// only when the row is missing or malformed.
 const DEFAULT_CHILD: ChildProfile = { ageMonths: 12, sex: "M" };
 
 // Meta webhook verification handshake (configured once in Meta App Dashboard).
@@ -64,8 +69,19 @@ export async function POST(req: NextRequest) {
   const from = msg.from;
   const caregiverId = await upsertCaregiver(from);
 
-  // Greeting / non-audio fallback
+  // Greeting / non-audio fallback. Onboarding flow:
+  //   • Text reply: try to parse as integer years → ChildProfile.ageMonths.
+  //   • Audio reply: transcribe with Whisper Bangla → parse → ChildProfile.
+  //   • Otherwise: send greeting + ask for the child's age.
   if (msg.type !== "audio" || !msg.audio) {
+    if (msg.type === "text" && msg.text?.body) {
+      const years = parseBanglaAgeYears(msg.text.body);
+      if (years !== null) {
+        await persistChildAge(caregiverId, years);
+        await sendText(from, `ধন্যবাদ! আপনার শিশুর বয়স ${years} বছর হিসেবে সংরক্ষণ করা হলো। এখন একটি ৩০ সেকেন্ডের কাশির voice note পাঠান।`);
+        return new NextResponse("ok", { status: 200 });
+      }
+    }
     await sendText(from, GREETING_BANGLA);
     await audit({
       eventType: "whatsapp_greeting_sent",
@@ -73,6 +89,48 @@ export async function POST(req: NextRequest) {
       caregiverId
     });
     return new NextResponse("ok", { status: 200 });
+  }
+
+  // Audio path: first determine whether this is an onboarding reply (caregiver
+  // saying "doy bochor" in response to our Bangla age prompt) or an actual
+  // 30-sec cough voice note. Onboarding voice replies are short (<8 sec) and
+  // come before any ChildProfile is stored; cough recordings are 20-60 sec.
+  const existingProfile = await loadChildProfile(caregiverId);
+  const profileIsDefault =
+    existingProfile.ageMonths === DEFAULT_CHILD.ageMonths &&
+    existingProfile.sex === DEFAULT_CHILD.sex;
+  if (profileIsDefault) {
+    try {
+      const { buffer: oBuf, mimeType: oMime } = await downloadMedia(msg.audio.id);
+      const onbPath = `onboarding/${crypto.randomUUID()}.${oMime.includes("ogg") ? "ogg" : "mp3"}`;
+      await supabaseAdmin.storage.from("recordings").upload(onbPath, oBuf, {
+        contentType: oMime ?? "audio/ogg",
+        upsert: false
+      });
+      const { data: oSigned } = await supabaseAdmin.storage
+        .from("recordings")
+        .createSignedUrl(onbPath, 600);
+      const oUrl = oSigned?.signedUrl ?? "";
+      const transcript = await transcribeBangla(oUrl);
+      const years = parseBanglaAgeYears(transcript.text);
+      if (years !== null) {
+        await persistChildAge(caregiverId, years);
+        await sendText(
+          from,
+          `ধন্যবাদ! আপনার কথা থেকে শিশুর বয়স ${years} বছর শনাক্ত করা হয়েছে। এখন শিশুর ৩০ সেকেন্ডের কাশির voice note পাঠান।`
+        );
+        await audit({
+          eventType: "onboarding_asr_age_captured",
+          payload: { years, transcript: transcript.text },
+          caregiverId
+        });
+        return new NextResponse("ok", { status: 200 });
+      }
+      // Fall through — if ASR didn't yield a number, treat the audio as a
+      // cough recording attempt (caller may have skipped onboarding).
+    } catch (err) {
+      console.warn("[onboarding] ASR failed, treating as cough audio", err);
+    }
   }
 
   try {
@@ -103,8 +161,38 @@ export async function POST(req: NextRequest) {
       source: "whatsapp"
     });
 
-    // 3. Classify
+    // 3. Classify cough audio
     const classification = await classifyCough(audioUrl);
+
+    // 3b. Optional CXR — if the caregiver also uploaded a chest X-ray photo
+    // (smartphone-of-CXR-on-backlit-panel in the rural-clinic case), call
+    // the TorchXrayVision endpoint and pass the finding into the multi-modal
+    // decision as a hard override. Phase 3 scaffold; full pilot Q3 2026.
+    let cxrSignal: CxrSignal | null = null;
+    if (msg.image?.id) {
+      try {
+        const { buffer: imgBuf, mimeType: imgMime } = await downloadMedia(msg.image.id);
+        const cxrPath = `cxr/${crypto.randomUUID()}.jpg`;
+        await supabaseAdmin.storage.from("recordings").upload(cxrPath, imgBuf, {
+          contentType: imgMime ?? "image/jpeg",
+          upsert: false
+        });
+        const { data: cxrSigned } = await supabaseAdmin.storage
+          .from("recordings")
+          .createSignedUrl(cxrPath, 3600);
+        const cxrUrl = cxrSigned?.signedUrl ?? "";
+        const cxr = await classifyCxr(cxrUrl);
+        if (cxr) {
+          cxrSignal = {
+            pneumoniaProb: cxr.pneumoniaProb,
+            consolidationProb: cxr.consolidationProb,
+            noFindingProb: cxr.noFindingProb
+          };
+        }
+      } catch (err) {
+        console.warn("[cxr] failed, continuing audio-only", err);
+      }
+    }
 
     const { data: cls } = await supabaseAdmin
       .from("classifications")
@@ -122,15 +210,23 @@ export async function POST(req: NextRequest) {
 
     const classificationId = cls?.id;
 
-    // 4. Retrieve IMCI chunks (logged for audit / explainability only)
-    const chunks = await retrieveImci(
-      classification.class,
-      DEFAULT_CHILD.ageMonths,
-      3
-    );
+    // 4. Load caregiver-reported child profile (age, sex, fever, symptom days)
+    // collected via WhatsApp Q&A on first contact. Feeds both IMCI retrieval
+    // (age-banded) and the multi-modal severity decision (tachypnea
+    // thresholds are age-banded per WHO IMCI).
+    const profile = await loadChildProfile(caregiverId);
+    const chunks = await retrieveImci(classification.class, profile.ageMonths, 3);
 
-    // 5. Bangla guidance — pure stock library, rules-gated severity, no LLM.
-    const decision = decideSeverity(classification);
+    // 5. Multi-modal severity decision — audio class + auto-measured
+    // respiratory rate + caregiver-reported child profile. Deterministic
+    // rules table; no runtime LLM. WHO IMCI tachypnea is a hard escalation
+    // override over borderline audio confidence — the multi-modal lift.
+    const decision = decideSeverityMultiModal({
+      classification,
+      profile,
+      breathsPerMin: classification.breathsPerMin ?? null,
+      cxr: cxrSignal
+    });
     const banglaText =
       getStockBangla(classification.class, decision.severity) ?? ERROR_BANGLA;
 
@@ -186,14 +282,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 9. Audit
+    // 9. Audit — log every signal that fed the deterministic decision so the
+    // BMRC ethics review trail can reproduce any classification outcome.
     await audit({
       eventType: "classification_complete",
       payload: {
         class: classification.class,
         confidence: classification.confidence,
+        breathsPerMin: classification.breathsPerMin ?? null,
+        rrConfidence: classification.rrConfidence ?? null,
+        cxrPneumoniaProb: cxrSignal?.pneumoniaProb ?? null,
+        cxrConsolidationProb: cxrSignal?.consolidationProb ?? null,
+        profileAgeMonths: profile.ageMonths,
+        profileFever: profile.fever ?? null,
+        profileSymptomDays: profile.symptomDays ?? null,
         mustEscalate: decision.mustEscalate,
         severity: decision.severity,
+        decisionReason: decision.reason,
         retrievedChunkIds: chunks.map((c) => c.id)
       },
       recordingId,
@@ -229,6 +334,38 @@ async function upsertCaregiver(whatsappNumber: string): Promise<string> {
     .select("id")
     .single();
   return data!.id;
+}
+
+// Persist a caregiver-reported child age (years) into the caregivers row
+// after a text or ASR onboarding turn captured it.
+async function persistChildAge(caregiverId: string, years: number): Promise<void> {
+  const ageMonths = Math.max(0, Math.min(60, Math.round(years * 12)));
+  const profile: ChildProfile = { ageMonths, sex: "O" };
+  await supabaseAdmin
+    .from("caregivers")
+    .update({ child_profile_json: profile })
+    .eq("id", caregiverId);
+}
+
+// Returns the stored ChildProfile from the caregivers row, or DEFAULT_CHILD
+// when the caregiver hasn't completed onboarding Q&A yet. Profile is collected
+// via WhatsApp text replies on first contact (age, sex, symptom-days, fever).
+async function loadChildProfile(caregiverId: string): Promise<ChildProfile> {
+  const { data } = await supabaseAdmin
+    .from("caregivers")
+    .select("child_profile_json")
+    .eq("id", caregiverId)
+    .maybeSingle();
+  const raw = data?.child_profile_json;
+  if (!raw || typeof raw !== "object") return DEFAULT_CHILD;
+  const profile = raw as Partial<ChildProfile>;
+  if (typeof profile.ageMonths !== "number") return DEFAULT_CHILD;
+  return {
+    ageMonths: profile.ageMonths,
+    sex: profile.sex ?? "O",
+    symptomDays: profile.symptomDays,
+    fever: profile.fever
+  };
 }
 
 // CHW numbers in seed data are stored with the legacy "whatsapp:+" Twilio prefix.

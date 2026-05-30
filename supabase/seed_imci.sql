@@ -2,7 +2,23 @@
 -- Adds the pgvector match function + a small set of sample chunks for demo.
 -- For full production, run scripts/ingest_imci.ts to ingest the WHO IMCI handbook (~120 pages).
 
--- pgvector match function for RAG retrieval
+-- Anthropic-style Contextual RAG: each chunk carries a generated `context`
+-- prefix (~50 tokens) describing which IMCI section it belongs to and what
+-- clinical decision it covers. The prefix is generated one-shot at ingest by
+-- scripts/build-contextual-chunks.ts and is concatenated with the chunk body
+-- before embedding — the same approach Anthropic published in their
+-- Contextual Retrieval blog (2024-09).
+alter table imci_chunks add column if not exists context text;
+
+-- Hybrid Search: full-text keyword index alongside vector similarity.
+-- The retrieveImciHybrid() path runs vector top-K and tsvector top-K in
+-- parallel, then a Cohere reranker reorders the union.
+alter table imci_chunks add column if not exists body_tsv tsvector
+  generated always as (to_tsvector('english', coalesce(context, '') || ' ' || body)) stored;
+
+create index if not exists imci_chunks_tsv_idx on imci_chunks using gin (body_tsv);
+
+-- pgvector match function for RAG retrieval (now includes context prefix).
 create or replace function match_imci_chunks(
   query_embedding vector(3072),
   match_count int default 3,
@@ -14,6 +30,7 @@ returns table (
   title text,
   age_range text,
   body text,
+  context text,
   similarity float
 )
 language sql
@@ -25,11 +42,57 @@ as $$
     imci_chunks.title,
     imci_chunks.age_range,
     imci_chunks.body,
+    imci_chunks.context,
     1 - (imci_chunks.embedding <=> query_embedding) as similarity
   from imci_chunks
   where age_filter is null or imci_chunks.age_range = age_filter or imci_chunks.age_range = 'all'
   order by imci_chunks.embedding <=> query_embedding
   limit match_count;
+$$;
+
+-- Hybrid match — combine pgvector ANN with tsvector full-text scores.
+-- Returns the union top-K of each path; client-side reranker (Cohere) handles
+-- final ordering.
+create or replace function match_imci_chunks_hybrid(
+  query_embedding vector(3072),
+  query_text text,
+  match_count int default 6,
+  age_filter text default null
+)
+returns table (
+  id uuid,
+  source text,
+  title text,
+  age_range text,
+  body text,
+  context text,
+  vec_similarity float,
+  ts_rank float
+)
+language sql
+stable
+as $$
+  with vec as (
+    select c.id, 1 - (c.embedding <=> query_embedding) as vec_similarity, 0::float as ts_rank
+    from imci_chunks c
+    where age_filter is null or c.age_range = age_filter or c.age_range = 'all'
+    order by c.embedding <=> query_embedding
+    limit match_count
+  ), kw as (
+    select c.id, 0::float as vec_similarity, ts_rank(c.body_tsv, plainto_tsquery('english', query_text)) as ts_rank
+    from imci_chunks c
+    where (age_filter is null or c.age_range = age_filter or c.age_range = 'all')
+      and c.body_tsv @@ plainto_tsquery('english', query_text)
+    order by ts_rank desc
+    limit match_count
+  ), combined as (
+    select id, max(vec_similarity) as vec_similarity, max(ts_rank) as ts_rank
+    from (select * from vec union all select * from kw) u
+    group by id
+  )
+  select c.id, c.source, c.title, c.age_range, c.body, c.context, x.vec_similarity, x.ts_rank
+  from combined x
+  join imci_chunks c on c.id = x.id;
 $$;
 
 -- Sample IMCI chunks (without embeddings — populate via ingest script).

@@ -36,6 +36,8 @@ Step-by-step from a fresh machine to a working WhatsApp demo. Total time: ~6 hou
 
 ## Hour 2–3: Deploy classifier to Modal (after training finishes)
 
+> **Modal vs Ollama vs CHW carve-out (read first).** Modal serverless CPU is the **production audio classifier** that the WhatsApp webhook calls — Wav2Vec2 int8 ONNX, ~5s p50, scales to zero. The `chw-mobile/` Ollama + Qwen2.5 setup is a **completely separate** CHW-side offline LLM for triage-summary on field tablets when network drops; it is NOT an alternative to the Modal classifier. See `ARCHITECTURE.md` §3 for the full LLM carve-out.
+
 ```bash
 cd babypulmo/colab
 mv ~/Downloads/babypulmo_wav2vec2.onnx ./
@@ -54,6 +56,20 @@ Test it:
 curl -X POST 'https://your-username--babypulmo-classify-endpoint.modal.run' \
   -H 'Content-Type: application/json' \
   -d '{"audio_url":"https://example.com/sample.wav"}'
+```
+
+### Optional Phase 3 endpoints (CXR vision + Whisper Bangla ASR)
+
+Both ship as scaffolds with deterministic mock fallback when the env vars are unset; deploy them when you want the multi-modal CXR override or voice-only onboarding to be live.
+
+```bash
+# CXR vision — TorchXrayVision DenseNet121, CPU container (~$0.0003/call)
+modal deploy colab/cxr_vision_modal.py
+# → set CXR_ENDPOINT in Vercel
+
+# Whisper Bangla onboarding ASR — large-v3 on T4 GPU (~$0.006/call, onboarding only)
+modal deploy colab/deploy_whisper_modal.py
+# → set WHISPER_ENDPOINT in Vercel
 ```
 
 ## Hour 4–5: Configure + deploy Next.js to Vercel
@@ -80,6 +96,7 @@ vercel
 vercel env add NEXT_PUBLIC_SUPABASE_URL          # paste value
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 vercel env add SUPABASE_SERVICE_ROLE_KEY
+vercel env add SUPABASE_URL                       # mirror NEXT_PUBLIC_SUPABASE_URL (MCP servers)
 vercel env add WHATSAPP_PHONE_NUMBER_ID
 vercel env add WHATSAPP_ACCESS_TOKEN
 vercel env add WHATSAPP_APP_SECRET
@@ -87,6 +104,13 @@ vercel env add WHATSAPP_VERIFY_TOKEN
 vercel env add GCP_TTS_API_KEY
 vercel env add CLASSIFIER_ENDPOINT
 vercel env add OPENAI_API_KEY
+vercel env add ANTHROPIC_API_KEY                  # one-shot Contextual RAG ingest
+vercel env add COHERE_API_KEY                     # Hybrid Search reranker (optional)
+vercel env add CXR_ENDPOINT                       # Phase 3A (optional)
+vercel env add WHISPER_ENDPOINT                   # Phase 2F/3E (optional)
+vercel env add AUDIT_PARQUET_BUCKET               # Phase 1D Lakehouse bucket
+vercel env add STOCK_BANGLA_JSON                  # clinical-content private JSON
+vercel env add SEVERITY_RULES_JSON                # clinical-content private JSON
 vercel --prod
 ```
 
@@ -152,12 +176,83 @@ Test 3 — full classifier:
 - **`crypto.randomUUID()` not defined**: Make sure you're on Node 18+ runtime in Vercel.
 - **Pre-warm the TTS cache**: after deploy, hit `warmStockCache()` once (e.g. add a temporary `/api/warm` route or call from a Node script with the env vars). All 7 stock scripts get cached so the first user call is already a hit.
 
+## Phase 1+2+3 scaffold deployment (optional but recommended)
+
+The base runbook above ships the deterministic caregiver runtime. The scaffolds below extend it with MCP exposure, partner automation, federated training, and offline CHW tooling — each is independent, all preserve the §3 carve-out.
+
+### MCP servers (Phase 1C + 2A — 3 servers BUILT)
+
+```bash
+# Build each server
+cd babypulmo/mcp/classifier-server   && npm install && npm run build && cd -
+cd babypulmo/mcp/imci-rag-server     && npm install && npm run build && cd -
+cd babypulmo/mcp/chw-routing-server  && npm install && npm run build && cd -
+
+# Smoke test (3 tools should appear)
+npx @modelcontextprotocol/inspector babypulmo/mcp/classifier-server/dist/index.js
+```
+
+Register with Claude Desktop by adding each server to `~/Library/Application Support/Claude/claude_desktop_config.json` — see each server's README for the exact JSON snippet.
+
+### n8n workflow runner (Phase 2B)
+
+```bash
+cd babypulmo/deploy/n8n
+docker compose up -d
+# Open http://localhost:5678 — basic-auth from N8N_BASIC_AUTH_USER / _PASSWORD
+# Import workflows/brac-weekly-export.json via the UI → activate
+```
+
+### Federated training scaffold (Phase 3B)
+
+```bash
+pip install flwr==1.13.1
+# Terminal 1 (aggregation server)
+python babypulmo/federated/flower-server.py --rounds=1
+# Terminal 2 (hospital client A)
+python babypulmo/federated/hospital-client.py --partition=jbfh
+# Terminal 3 (hospital client B)
+python babypulmo/federated/hospital-client.py --partition=dhaka-shishu
+```
+
+### CHW offline LLM (Phase 2C — Ollama + Qwen2.5)
+
+Runs on the CHW's Android tablet via Termux + Ollama, NOT on Vercel/Modal. See `babypulmo/chw-mobile/README.md`. Not part of the Vercel deploy.
+
+### Lakehouse Parquet exporter (Phase 1D)
+
+Wire as a Vercel cron (or run locally for the demo):
+
+```bash
+# Schedule in vercel.json:
+{
+  "crons": [{ "path": "/api/cron/export-audit-parquet", "schedule": "0 2 * * *" }]
+}
+# Or run manually
+npx tsx babypulmo/scripts/export-audit-parquet.ts
+```
+
+### `/docs` live module (Phase 1B)
+
+Auto-deploys with the Next.js app. After `vercel --prod`, visit `https://babypulmo.com/docs` to verify the architecture + costs + accuracy sections render and the DuckDB-WASM analytics cell loads.
+
+### Differential privacy aggregate export (Phase 3D)
+
+```bash
+npx tsx babypulmo/scripts/dp-export.ts --query=per_district_pneumonia_rate --epsilon=1.0 --dry-run
+```
+
+Wires into the n8n weekly export workflow (Phase 2B) so the CSV that reaches BRAC is DP-noised, not raw aggregate.
+
 ## Done = these all work
 
 - [ ] You can send any text to the WhatsApp number and get a Bangla greeting back
 - [ ] You can send a voice note and get a Bangla audio reply with classification card
-- [ ] When severity is pneumonia/bronchiolitis/croup/pertussis, an alert appears on `/chw`
+- [ ] When severity is critical/high (CXR override, tachypnea override, or audio class with high confidence), an alert appears on `/chw`
 - [ ] CHW (mock) receives a WhatsApp message with audio attached
-- [ ] Supabase `audit_log` table has rows for each interaction
+- [ ] Supabase `audit_log` table has rows with every signal (class, confidence, breathsPerMin, decisionReason)
 - [ ] Vercel deploy is live at a public URL
+- [ ] `/docs` page renders all sections + DuckDB-WASM cell shows decision-reason breakdown
+- [ ] `/chw/investigate` page accepts a question and returns a LangGraph trace
+- [ ] At least one MCP server (`classifier-server`) is registered with Claude Desktop and the 3 tools list
 - [ ] You have a 3-min video, a PDF summary, and you've submitted on the portal

@@ -12,6 +12,7 @@ export interface MetaMessage {
   timestamp: string;
   type: "text" | "audio" | "image" | "video" | "document" | "location" | string;
   audio?: { id: string; mime_type: string };
+  image?: { id: string; mime_type: string; caption?: string };
   text?: { body: string };
   location?: { latitude: number; longitude: number };
 }

@@ -11,12 +11,13 @@ Per one user interaction = one 30-sec cough voice note → reply (with Bangla au
 | Edge function (webhook orchestrator) | Vercel                                | ~$0.0000      | ~$0.0000       |
 | Cough classifier (~5s int8 ONNX, CPU)| Modal CPU (2 vCPU, 2 GB)              | $0.0003       | $0.0003        |
 | Embedding for RAG query (~100 tok)   | OpenAI text-embedding-3-large         | $0.00001      | $0.00001       |
-| pgvector retrieval                   | Supabase Postgres                     | ~$0.0000      | ~$0.0000       |
-| Bangla guidance                      | Stock library (no LLM)                | **$0.0000**   | **$0.0000**    |
+| pgvector + tsvector retrieval        | Supabase Postgres                     | ~$0.0000      | ~$0.0000       |
+| Cohere multilingual rerank (top-6)   | Cohere `rerank-multilingual-v3.0`     | ~$0.0001      | ~$0.0001       |
+| Bangla guidance                      | Stock library (no runtime LLM)        | **$0.0000**   | **$0.0000**    |
 | Bangla TTS                           | GCP bn-IN WaveNet, content-hash cached (>99% hit on stock) | **~$0.0000**  | **~$0.0000**   |
 | CHW outbound alert                   | Meta utility template message (BD)    | —             | $0.0140        |
 | Audit log write                      | Supabase Postgres                     | ~$0.0000      | ~$0.0000       |
-| **Total**                            |                                       | **≈ $0.0004** | **≈ $0.0144**  |
+| **Total**                            |                                       | **≈ $0.0005** | **≈ $0.0145**  |
 
 ## Weighted average
 
@@ -71,3 +72,17 @@ console.log(await warmStockCache());
 // { warmed: 7, alreadyCached: 0 }   on first run
 // { warmed: 0, alreadyCached: 7 }   on subsequent runs
 ```
+
+## Phase 3 scaffolds (cost zero today, cost line in pilot)
+
+These endpoints exist as scaffolds and only incur cost when actually wired up in production. None affect the standard-call weighted average above.
+
+| Scaffold | Endpoint | Cost when active | When charged |
+|---|---|---|---|
+| **CXR vision** | Modal CPU DenseNet121 (`colab/cxr_vision_modal.py`) | ~$0.0003/call | ONLY when caregiver uploads a CXR image alongside the cough |
+| **Whisper Bangla ASR** | Modal T4 GPU large-v3 (`colab/deploy_whisper_modal.py`) | ~$0.006/call | ONLY at caregiver onboarding ("say child's age") — once per caregiver |
+| **Ollama + Qwen2.5 CHW offline** | On CHW Android tablet | **$0/call** (runs locally) | Never charged — runs entirely on CHW's device |
+| **Federated learning** | Flower aggregation server (partner hospitals) | Hospital-bears training compute | Partner-side; no Baby Pulmo cloud cost |
+| **DP-noised aggregate export** | OpenDP Laplace (`scripts/dp-export.ts`) | $0 — pure compute on the Vercel function | Weekly cron, ~$0.0001/run |
+
+Net effect on weighted average: **less than +$0.0001** in the steady state, even with all scaffolds live, because the heavy callers (Whisper, CXR) only fire on specific user actions.

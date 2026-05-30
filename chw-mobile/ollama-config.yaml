@@ -1,0 +1,45 @@
+# Baby Pulmo CHW Offline Mode — Ollama configuration
+# ────────────────────────────────────────────────────────────────────────
+# Runs on CHW field tablets (Android via Termux + Ollama, or a Kotlin
+# wrapper around llama.cpp). Used by CHWs to investigate the queue of
+# pending escalations when network connectivity drops — common in rural
+# upazila during monsoon season.
+#
+# CLINICAL POSTURE PRESERVATION:
+#   This is CHW-side tooling. CHWs are trained health professionals — their
+#   investigation tools may use LLMs. The CAREGIVER-facing system remains
+#   strictly rules-gated + clinician-vetted stock-script (no runtime LLM).
+#   See ARCHITECTURE.md §3 carve-out.
+#
+# v0 scaffold for prelim demo. Full pilot rollout to CHW tablets Q3 2026.
+
+runtime: ollama
+runtime_url: http://127.0.0.1:11434
+
+models:
+  primary:
+    name: qwen2.5:1.5b-instruct-q4_K_M
+    purpose: |
+      Bangla triage-summary on the CHW's queue of pending pediatric escalations.
+      Strong Bangla support, small enough (~1 GB) for older Android tablets.
+    quantization: Q4_K_M
+    context_window: 8192
+    chat_template: chatml
+
+  fallback:
+    name: llama3.2:1b-instruct-q4_K_M
+    purpose: |
+      Backup runtime when Qwen2.5 isn't available; same triage task with
+      slightly weaker Bangla but acceptable for English-mediated summaries.
+    quantization: Q4_K_M
+    context_window: 8192
+
+# Operational guardrails — these mirror the runtime-LLM guardrails from
+# the caregiver path so even CHW-side use stays auditable.
+guardrails:
+  max_tokens: 400
+  temperature: 0.2
+  system_prompt_file: triage-investigate.md
+  disable_tool_use: true   # CHW model is read-only; no SQL / no API calls
+  log_to_audit: true       # every CHW prompt + response logged via the
+                           #   webhook's /api/chw/audit endpoint when online
