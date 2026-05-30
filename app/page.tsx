@@ -38,19 +38,23 @@ export default function Home() {
             on WhatsApp.
           </li>
           <li>
-            <span className="font-semibold">2.</span> Wav2Vec2 (fine-tuned on Coswara) classifies the cough into
-            6 pediatric respiratory categories with confidence + Grad-CAM heatmap.
+            <span className="font-semibold">2.</span> Wav2Vec2 (fine-tuned on the pediatric subset of Coswara
+            + COUGHVID + ICBHI) classifies the cough into 6 categories (healthy / common_cold / bronchiolitis /
+            pneumonia / asthma / croup) with confidence + Grad-CAM heatmap + auto-measured respiratory rate.
+            Optional second modality: TorchXrayVision DenseNet121 on a smartphone-photographed chest X-ray.
           </li>
           <li>
-            <span className="font-semibold">3.</span> RAG retrieves matching WHO IMCI severity protocol.
+            <span className="font-semibold">3.</span> Contextual + Hybrid RAG retrieves matching WHO IMCI /
+            DGHS protocol passages with a Cohere multilingual reranker.
           </li>
           <li>
-            <span className="font-semibold">4.</span> Claude generates Bangla audio guidance grounded in
-            retrieved protocols.
+            <span className="font-semibold">4.</span> Deterministic multi-modal severity decision
+            (CXR override → tachypnea override → audio_class) outputs a clinician-vetted Bangla stock script —
+            no LLM at runtime.
           </li>
           <li>
-            <span className="font-semibold">5.</span> Rules-gated severity triggers automatic CHW alert with
-            audio attached and GPS location.
+            <span className="font-semibold">5.</span> Severity ≥ high triggers automatic CHW alert with
+            audio attached and GPS location via PostGIS geo-routing.
           </li>
         </ol>
       </section>

@@ -1,0 +1,44 @@
+version: "3.9"
+
+# Baby Pulmo n8n self-hosted scaffold
+# Runs three back-of-house workflows that DO NOT touch the caregiver runtime
+# path (clinical posture preserved — see ARCHITECTURE.md §3 carve-out):
+#
+#   1. brac-weekly-export      — every Sunday 02:00 UTC, queries the DP-noised
+#                                aggregate view + uploads to BRAC SFTP
+#   2. bmrc-monthly-digest     — 1st of month, builds the BMRC ethics-review
+#                                digest from audit_log + emails to the ethics
+#                                committee
+#   3. chw-sla-watcher         — every 15 minutes, finds escalations not
+#                                acknowledged within 30 minutes and pings the
+#                                on-duty supervisor Slack
+#
+# All three are scheduler primitives, not LLM-driven agent loops — the
+# clinical-decision path stays deterministic.
+
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:1.62.4
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - N8N_PORT=5678
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=${TZ:-Asia/Dhaka}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - BRAC_SFTP_HOST=${BRAC_SFTP_HOST:-sftp.brac-internal.example}
+      - BRAC_SFTP_USER=${BRAC_SFTP_USER}
+      - BRAC_SFTP_KEY=${BRAC_SFTP_KEY}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
+
+volumes:
+  n8n_data:

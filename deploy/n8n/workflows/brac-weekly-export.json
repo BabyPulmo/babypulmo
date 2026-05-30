@@ -1,0 +1,81 @@
+{
+  "name": "BRAC weekly de-identified CSV export",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 2 * * 0"
+            }
+          ]
+        }
+      },
+      "name": "Cron — Sun 02:00 UTC",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL}}/rest/v1/rpc/dp_noised_weekly_aggregate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {
+          "headers": {
+            "apikey": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}",
+            "Authorization": "Bearer {{$env.SUPABASE_SERVICE_ROLE_KEY}}",
+            "Content-Type": "application/json"
+          }
+        },
+        "bodyParametersJson": "{ \"epsilon\": 1.0, \"week_offset\": -1 }"
+      },
+      "name": "Query DP-noised aggregate view",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [480, 300]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "/tmp/brac_export_{{$today.toISO()}}.csv",
+        "options": { "headerRow": true }
+      },
+      "name": "Write CSV",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "host": "={{$env.BRAC_SFTP_HOST}}",
+        "username": "={{$env.BRAC_SFTP_USER}}",
+        "privateKey": "={{$env.BRAC_SFTP_KEY}}",
+        "operation": "upload",
+        "path": "/incoming/babypulmo/",
+        "fileName": "babypulmo_weekly_{{$today.toISO()}}.csv"
+      },
+      "name": "SFTP upload to BRAC",
+      "type": "n8n-nodes-base.sftp",
+      "typeVersion": 1,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Cron — Sun 02:00 UTC": {
+      "main": [[{ "node": "Query DP-noised aggregate view", "type": "main", "index": 0 }]]
+    },
+    "Query DP-noised aggregate view": {
+      "main": [[{ "node": "Write CSV", "type": "main", "index": 0 }]]
+    },
+    "Write CSV": {
+      "main": [[{ "node": "SFTP upload to BRAC", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "versionId": "01-baby-pulmo-scaffold"
+}

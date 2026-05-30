@@ -33,8 +33,11 @@ export async function classifyCough(audioUrl: string): Promise<ClassificationRes
     confidence: data.confidence,
     classProbs: data.class_probs,
     heatmapUrl: data.heatmap_url,
-    modelVersion: data.model_version ?? "wav2vec2-coswara-v1",
-    inferenceMs: Date.now() - start
+    modelVersion: data.model_version ?? "wav2vec2-fused-pediatric-v1",
+    inferenceMs: Date.now() - start,
+    breathsPerMin:
+      typeof data.breaths_per_min === "number" ? data.breaths_per_min : null,
+    rrConfidence: data.rr_confidence
   };
 }
 
@@ -56,6 +59,8 @@ function mockClassify(): ClassificationResult {
     classProbs,
     heatmapUrl: undefined,
     modelVersion: "mock-v0",
-    inferenceMs: 50
+    inferenceMs: 50,
+    breathsPerMin: 52, // tachypneic for a 1-yr-old → demo triggers override
+    rrConfidence: "medium"
   };
 }
