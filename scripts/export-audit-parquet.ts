@@ -15,7 +15,8 @@
 //   npx tsx scripts/export-audit-parquet.ts --dry-run
 
 import { supabaseAdmin } from "../lib/supabase";
-import { parquetWriteFile } from "hyparquet-writer";
+// hyparquet-writer is ESM-only; importing it statically crashes under tsx's CJS
+// resolution (ERR_PACKAGE_PATH_NOT_EXPORTED). Loaded dynamically inside main().
 
 const BUCKET = process.env.AUDIT_PARQUET_BUCKET ?? "lakehouse";
 const PREFIX = "audit_log";
@@ -102,7 +103,10 @@ async function main() {
     return;
   }
 
-  const tmpPath = `/tmp/${PREFIX}_${partition}.parquet`;
+  const { parquetWriteFile } = await import("hyparquet-writer");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const tmpPath = path.join(os.tmpdir(), `${PREFIX}_${partition}.parquet`);
   await parquetWriteFile({
     filename: tmpPath,
     columnData: columnize(flat)
@@ -131,10 +135,17 @@ async function main() {
 function columnize(rows: ReturnType<typeof flattenForParquet>) {
   if (rows.length === 0) return [];
   const keys = Object.keys(rows[0]) as Array<keyof (typeof rows)[0]>;
-  return keys.map((k) => ({
-    name: String(k),
-    data: rows.map((r) => r[k] as string | number | boolean | null)
-  }));
+  return keys.map((k) => {
+    const data = rows.map((r) => r[k] as string | number | boolean | null);
+    // hyparquet-writer infers column type from the data; an all-null column (e.g.
+    // symptom_days on a day no caregiver reported it) gives it nothing to infer
+    // from and throws "cannot determine type". Pin such columns to a nullable
+    // string so the partition schema stays stable day to day.
+    const allNull = data.every((v) => v === null || v === undefined);
+    return allNull
+      ? { name: String(k), data, type: "BYTE_ARRAY" as const }
+      : { name: String(k), data };
+  });
 }
 
 main().catch((e) => {
