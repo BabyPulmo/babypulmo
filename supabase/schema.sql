@@ -13,8 +13,15 @@ create table if not exists caregivers (
   name text,
   district text,
   preferred_language text default 'bn',
+  -- Onboarding profile the webhook persists/reads (ChildProfile in lib/types.ts):
+  -- { ageMonths, sex, symptomDays?, fever? }. Written at route.ts:346, read at :356.
+  child_profile_json jsonb,
   created_at timestamptz default now()
 );
+
+-- Safety net for projects created before child_profile_json was added to the
+-- CREATE above. Harmless on a fresh project.
+alter table caregivers add column if not exists child_profile_json jsonb;
 
 -- Children (subjects being screened)
 create table if not exists children (
@@ -115,7 +122,13 @@ create table if not exists imci_chunks (
 create index if not exists idx_chws_location on chws using gist (location);
 create index if not exists idx_chws_available on chws (available) where available = true;
 create index if not exists idx_alerts_status on alerts (status, severity);
-create index if not exists idx_imci_chunks_embedding on imci_chunks using ivfflat (embedding vector_cosine_ops);
+-- NOTE: embedding is vector(3072) (OpenAI text-embedding-3-large). pgvector's
+-- ivfflat AND hnsw indexes cap at 2000 dims for the `vector` type, so neither can
+-- index this column directly. For the demo / seed-scale corpus a sequential scan is
+-- fine. For production scale, switch to halfvec:
+--   create index idx_imci_chunks_embedding on imci_chunks
+--     using hnsw ((embedding::halfvec(3072)) halfvec_cosine_ops);
+-- and cast in match_imci_chunks. Left unindexed here so the schema applies cleanly.
 
 -- Nearest available CHW function (Haversine via PostGIS)
 create or replace function find_nearest_chw(
@@ -177,3 +190,20 @@ create policy "service role full access" on imci_chunks for all using (auth.role
 -- Allow anon read of alerts (for CHW dashboard demo)
 create policy "anon read alerts" on alerts for select using (true);
 create policy "anon read chws" on chws for select using (true);
+
+-- Realtime: stream new alerts to the /chw dashboard (app/chw/page.tsx subscribes
+-- to postgres_changes on this table). Without this, alerts only show on refresh.
+alter publication supabase_realtime add table alerts;
+
+-- Grants for the Supabase API roles. The dashboard SQL editor applies these via
+-- pre-configured default privileges, but a table created over a direct/pooled
+-- postgres connection does NOT inherit them — without these, even the service_role
+-- key gets "permission denied". RLS (enabled above) still gates anon/authenticated
+-- row access; service_role bypasses RLS.
+grant usage on schema public to anon, authenticated, service_role;
+grant all on all tables in schema public to anon, authenticated, service_role;
+grant all on all sequences in schema public to anon, authenticated, service_role;
+grant all on all functions in schema public to anon, authenticated, service_role;
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;

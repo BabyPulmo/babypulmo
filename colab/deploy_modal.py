@@ -30,10 +30,16 @@ image = (
     )
 )
 
+# Must match colab/train_wav2vec2.py::LABEL2ID exactly (6-class pediatric output).
+# The runtime maps these to lib/types.ts CoughClass in lib/classifier.ts
+# (healthy/common_cold -> "normal"; the rest pass through 1:1).
 ID2LABEL = {
-    0: "pneumonia",       # mapped from cough_pneumonia_like
-    1: "asthma",          # mapped from cough_asthma_like
-    2: "normal",          # mapped from cough_normal
+    0: "healthy",
+    1: "common_cold",
+    2: "bronchiolitis",
+    3: "pneumonia",
+    4: "asthma",
+    5: "croup",
 }
 
 TARGET_SR = 16000

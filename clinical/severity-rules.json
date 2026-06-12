@@ -1,0 +1,9 @@
+{
+  "pneumonia":            { "mustEscalate": true,  "severity": "critical", "action": "see_chw_now" },
+  "bronchiolitis":        { "mustEscalate": true,  "severity": "high",     "action": "see_doctor_24h" },
+  "croup":                { "mustEscalate": true,  "severity": "high",     "action": "see_doctor_24h" },
+  "pertussis":            { "mustEscalate": true,  "severity": "high",     "action": "see_doctor_24h" },
+  "asthma":               { "mustEscalate": false, "severity": "moderate", "action": "see_doctor_24h" },
+  "normal":               { "mustEscalate": false, "severity": "low",      "action": "normal" },
+  "insufficient_quality": { "mustEscalate": false, "severity": "low",      "action": "observe_24h" }
+}
