@@ -134,9 +134,6 @@ export default function ChwDashboard() {
           <section className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-pulmo-deep">Recent Alerts</h2>
-              <Link href="#" className="text-xs font-medium text-pulmo-blue hover:underline">
-                View All Alerts →
-              </Link>
             </div>
 
             {loading && <p className="mt-4 text-sm text-slate-500">Loading alerts…</p>}
@@ -163,9 +160,6 @@ export default function ChwDashboard() {
           <section className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-semibold text-pulmo-deep">Patient Location Map</h2>
-              <Link href="#" className="text-xs font-medium text-pulmo-blue hover:underline">
-                View Full Map →
-              </Link>
             </div>
             <div className="mt-4 aspect-square overflow-hidden rounded-lg border border-slate-100 bg-pulmo-surface">
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-pulmo-blue/10 via-pulmo-green/10 to-pulmo-gold/10 text-center">

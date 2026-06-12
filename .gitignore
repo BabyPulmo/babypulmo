@@ -18,6 +18,16 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Python / local training venv (created for the abandoned local-training attempt)
+.venv-train/
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Throwaway script scratch files
+scripts/.demo-alerts.json
+
 # Training artifacts
 colab/output/
 colab/checkpoints/

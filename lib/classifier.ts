@@ -13,6 +13,33 @@ const CLASSES: CoughClass[] = [
   "insufficient_quality"
 ];
 
+// The trained Wav2Vec2 model emits the 6-class training label space
+// (colab/train_wav2vec2.py): healthy, common_cold, bronchiolitis, pneumonia,
+// asthma, croup. The runtime CoughClass (lib/types.ts) predates that and uses
+// normal/pertussis. Map model labels → runtime classes here so the deployed
+// model is plug-and-play without renaming the runtime everywhere. Both "healthy"
+// and "common_cold" are non-dangerous → "normal" (severity low/observe). Labels
+// already in the runtime space pass through unchanged.
+const MODEL_LABEL_MAP: Record<string, CoughClass> = {
+  healthy: "normal",
+  common_cold: "normal",
+  bronchiolitis: "bronchiolitis",
+  pneumonia: "pneumonia",
+  asthma: "asthma",
+  croup: "croup"
+};
+
+function toRuntimeClass(label: string): CoughClass {
+  return MODEL_LABEL_MAP[label] ?? (CLASSES.includes(label as CoughClass) ? (label as CoughClass) : "insufficient_quality");
+}
+
+function remapProbs(probs: Record<string, number> | undefined): Record<CoughClass, number> {
+  const out = {} as Record<CoughClass, number>;
+  for (const c of CLASSES) out[c] = 0;
+  if (probs) for (const [k, v] of Object.entries(probs)) out[toRuntimeClass(k)] += Number(v) || 0;
+  return out;
+}
+
 export async function classifyCough(audioUrl: string): Promise<ClassificationResult> {
   if (!ENDPOINT) return mockClassify();
 
@@ -29,15 +56,53 @@ export async function classifyCough(audioUrl: string): Promise<ClassificationRes
   const data = await res.json();
 
   return {
-    class: data.class as CoughClass,
+    class: toRuntimeClass(String(data.class)),
     confidence: data.confidence,
-    classProbs: data.class_probs,
+    classProbs: remapProbs(data.class_probs),
     heatmapUrl: data.heatmap_url,
     modelVersion: data.model_version ?? "wav2vec2-fused-pediatric-v1",
     inferenceMs: Date.now() - start,
     breathsPerMin:
       typeof data.breaths_per_min === "number" ? data.breaths_per_min : null,
     rrConfidence: data.rr_confidence
+  };
+}
+
+// Randomized SIMULATED classifier for the interactive /demo when no real model
+// endpoint is configured. Picks a plausible class with a believable confidence so the
+// demo feels varied — the UI labels this "simulated · model in training" so it never
+// masquerades as a trained model. breathsPerMin is overridden by the real, browser-
+// measured respiratory rate in /api/demo-classify, so it's left null here.
+export function simulateClassification(): ClassificationResult {
+  // Weighted pick — pneumonia/normal/bronchiolitis more common than croup/pertussis.
+  const weighted: CoughClass[] = [
+    "pneumonia", "pneumonia",
+    "bronchiolitis", "bronchiolitis",
+    "normal", "normal",
+    "asthma",
+    "croup",
+    "pertussis"
+  ];
+  const picked = weighted[Math.floor(Math.random() * weighted.length)];
+  const top = 0.55 + Math.random() * 0.4; // 0.55–0.95
+
+  // Distribute the remaining probability across the other classes.
+  const others = CLASSES.filter((c) => c !== picked);
+  const rest = others.map(() => Math.random());
+  const restSum = rest.reduce((a, b) => a + b, 0) || 1;
+  const classProbs = {} as Record<CoughClass, number>;
+  classProbs[picked] = top;
+  others.forEach((c, i) => (classProbs[c] = ((1 - top) * rest[i]) / restSum));
+
+  return {
+    class: picked,
+    confidence: Number(top.toFixed(2)),
+    classProbs,
+    heatmapUrl: undefined,
+    modelVersion: "simulated-v0",
+    inferenceMs: 40 + Math.floor(Math.random() * 60),
+    breathsPerMin: null,
+    rrConfidence: undefined
   };
 }
 
