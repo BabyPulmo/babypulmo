@@ -78,7 +78,7 @@ Plus shared chrome (`SiteHeader` + `SiteFooter`) owned by Claude Artifacts; moun
 Code commits to GitHub
 ```
 
-Each tool's prompts and outputs are documented as separate entries in `submission/form-draft.md` under "Frontend AI / Visual App Builders." Honest attribution — one tool, one set of pages.
+Each tool's prompts and outputs are documented as separate entries in each competition's form draft (`../submissions/<competition>/form-draft.md`) under "Frontend AI / Visual App Builders." Honest attribution — one tool, one set of pages.
 
 ## 6. Non-negotiable for any UI proposal
 

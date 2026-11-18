@@ -2,8 +2,7 @@
 // (architecture, costs, accuracy, team) as a single scrollable page plus an
 // interactive DuckDB-WASM cell over the latest Parquet audit-log partition.
 //
-// Built per the BuildFest "live /docs module" bonus rubric. Acts as the
-// project's live pitch deck + technical whitepaper + system dashboard.
+// Acts as the project's live pitch deck + technical whitepaper + system dashboard.
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -44,7 +43,7 @@ export default async function DocsPage() {
         <h1 className="text-3xl font-bold">Baby Pulmo — Live Docs</h1>
         <p className="mt-2 text-zinc-600">
           Architecture, costs, realistic accuracy expectations, and live audit-log analytics for
-          BuildFest 2026 judges.
+          judges, partners, and investors.
         </p>
         <nav className="mt-4 flex flex-wrap gap-4 text-sm">
           <a href="#summary" className="text-emerald-600 underline">Summary</a>

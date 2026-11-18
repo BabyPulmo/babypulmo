@@ -1,6 +1,6 @@
 # Baby Pulmo — VPS + Docker Deploy Runbook
 
-> **Owner:** Ferdous. All VPS operations are Ferdous-only per WIN-PLAN.md deployment policy.
+> **Owner:** Ferdous. All VPS operations are Ferdous-only.
 > **Goal:** babypulmo.com live with HTTPS + landing + `/docs` + `/chw` reachable by 2026-05-28.
 > **Stack:** Docker (web + classifier) inside; host nginx reverse-proxies with Let's Encrypt via certbot. No Caddy.
 > **Time budget:** ~90 minutes first-time bring-up; ~5 minutes for each subsequent deploy.

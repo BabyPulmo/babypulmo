@@ -62,5 +62,5 @@ Reduce under-5 pediatric pneumonia mortality in rural Bangladesh by providing Wh
 ### Review gates
 - Pre-implementation: ExitPlanMode user approval.
 - Code review: structured review skills (`/plan-eng-review`, `/plan-ceo-review`, `/plan-design-review`).
-- Pre-deployment: smoke tests in `submission/accuracy.md` §verification.
+- Pre-deployment: smoke tests in `../submissions/accuracy.md` §verification.
 - Pre-pilot: BMRC ethics review + Dr. Saadi clinical-script approval.

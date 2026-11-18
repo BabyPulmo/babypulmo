@@ -146,19 +146,19 @@ Test 3 — full classifier:
 ## Hour 6+: Demo polish + video recording
 
 - Record screen + face cam via Loom or OBS
-- Follow the 3-minute script in `../EXECUTION_PLAN.md`
+- Follow the 3-minute script for the competition you are entering (under `../submissions/<competition>/`)
 - Show: landing page → WhatsApp send → Bangla reply → CHW dashboard alert
 - Upload to YouTube (unlisted) + Google Drive
 
 ## Hour 8–10: Finalize 1-page summary + submit
 
-1. Open `submission/summary.md`
+1. Start from `../submissions/PROJECT-PROFILE.md` and copy it into `../submissions/<competition>/summary.md`
 2. Replace `[your name]`, `[NRB advisor]`, `[demo URL]`, `[GitHub URL]` placeholders
 3. Export to PDF (Pages, Google Docs, or `pandoc`):
    ```bash
-   pandoc submission/summary.md -o submission/summary.pdf --pdf-engine=xelatex
+   pandoc ../submissions/<competition>/summary.md -o ../submissions/<competition>/summary.pdf --pdf-engine=xelatex
    ```
-4. Go to `cloudcampbd.com/the-infinity-ai-buildfest` and submit:
+4. Go to the competition's submission portal and submit:
    - Video URL (YouTube unlisted link)
    - 1-page summary PDF upload
    - Demo URL (your Vercel link)

@@ -2,13 +2,13 @@
 
 ## What's in flight RIGHT NOW
 
-**BuildFest 2026 prelim submission** — deadline today (2026-05-30). Form fields finalized in `submission/form-draft.md`. User is pasting into the BuildFest submission form.
+**Competition submissions** — the contest-neutral project profile lives in `../submissions/PROJECT-PROFILE.md`; each active competition has its own folder under `../submissions/`.
 
 ## What just shipped
 
 - **Phase 1 + 2 + 3 scaffolds** (18 items) across `mcp/`, `agents/`, `federated/`, `chw-mobile/`, `scripts/`, `app/docs/`, `lib/{cxr-vision,whisper,respiratory-rate}.ts`. See `progress.md` for the breakdown.
-- **Docs sweep** — `README.md`, `DEPLOY.md`, `submission/summary.md`, `submission/video-script.md`, `COSTS.md`, `colab/README.md`, `app/page.tsx`, `ARCHITECTURE.md`, `outreach/dr-saadi-email.md`, `outreach/clinical-advisor-package.md`, `.env.example` all brought current with shipped code.
-- **`submission/form-draft.md`** updated (7 edits): MCP section now shows the 3 servers we built; Data & AI Provenance lists all current models; Frameworks & Libraries enumerates current stack; Honest holdouts reduced; Prompt 6 added.
+- **Docs sweep** — `README.md`, `DEPLOY.md`, `COSTS.md`, `colab/README.md`, `app/page.tsx`, `ARCHITECTURE.md`, `outreach/clinical-advisor-package.md`, `.env.example` all brought current with shipped code.
+- **Submission form drafts** now live per competition under `../submissions/<competition>/`; the contest-neutral source is `../submissions/PROJECT-PROFILE.md`.
 - **Context files added** — `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `.clinerules`, this `memory-bank/` (you're reading it).
 
 ## What's blocking submission

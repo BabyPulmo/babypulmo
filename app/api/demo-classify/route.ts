@@ -182,7 +182,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.error("[/api/demo-classify]", message);
+    console.error("[/api/demo-classify]", err);
+    if (err instanceof Error && err.cause) console.error("[/api/demo-classify] cause:", err.cause);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

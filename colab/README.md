@@ -53,7 +53,7 @@ CLASSIFIER_ENDPOINT=https://your-username--babypulmo-classify-endpoint.modal.run
 
 That's it — the WhatsApp webhook will now route cough recordings through your trained model.
 
-## Honest framing for the BuildFest pitch
+## Honest framing for the pitch
 
 `train_wav2vec2.py` filters Coswara, COUGHVID, and ICBHI to the pediatric subset (age ≤ 5 yr) using each dataset's age metadata. The combined pediatric sample count is documented in the script's §2 output. For the pitch, frame this as:
 > "Our classifier is trained on the fused pediatric subset of Coswara + COUGHVID + ICBHI — the three largest publicly available respiratory-sound datasets with age metadata, filtered to under-fives. Phase 1 of our roadmap is field collection of additional pediatric cough samples in Bangladesh through BRAC clinics, with BMRC ethics review, plus federated fine-tuning with partner hospitals (Flower scaffold in `babypulmo/federated/`) so hospital pediatric ward audio can refine the model without leaving the hospital network."

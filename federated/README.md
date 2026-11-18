@@ -58,4 +58,4 @@ Server prints aggregated F1 + pneumonia-sensitivity at the end of the round.
 
 ## Form claim
 
-The BuildFest form's Open Source AI Tools / Privacy & compliance / Evaluation sections now cite Flower + federated learning. Production rollout is honestly disclosed as Q4 2026 pending BMRC approval — no overclaim.
+Competition forms' Open Source AI Tools / Privacy & compliance / Evaluation sections now cite Flower + federated learning. Production rollout is honestly disclosed as Q4 2026 pending BMRC approval — no overclaim.

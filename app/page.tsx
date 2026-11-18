@@ -10,7 +10,7 @@ export default function Home() {
         <div className="mx-auto grid max-w-7xl gap-12 px-6 py-16 lg:grid-cols-2 lg:py-24">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-pulmo-blue">
-              THE INFINITY AI BUILDFEST 2026 · HealthTech
+              AI for Pediatric Health · HealthTech
             </p>
             <h1 className="mt-3 text-5xl font-bold leading-tight text-pulmo-deep">Baby Pulmo</h1>
             <p className="bn font-bangla mt-2 text-2xl italic text-slate-600">

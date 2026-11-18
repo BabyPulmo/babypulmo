@@ -5,7 +5,7 @@
 #   (a) paste this file's contents as cells (one per `# %%` marker), or
 #   (b) `!pip install jupytext && jupytext --to ipynb train_wav2vec2.py`
 #
-# Pipeline (matches `submission/form-draft.md` Fine-tuning section):
+# Pipeline (matches the Fine-tuning section of the project profile):
 #   1. Fuse three open respiratory datasets — Coswara (IISc), COUGHVID (EPFL),
 #      ICBHI 2017 (pediatric chest sounds).
 #   2. Filter to pediatric subset (age ≤ 5 years where age metadata exists;
@@ -24,7 +24,7 @@
 #
 # Targets — held-out test split:
 #   • ≥84% pediatric pneumonia sensitivity (JAMA Pediatrics 2018 ResApp bar)
-#   • Realistic v0 lab estimate: 70–78% (per submission/accuracy.md §2(b))
+#   • Realistic v0 lab estimate: 70–78% (per ../submissions/accuracy.md §2(b))
 
 # %% [markdown]
 # # Baby Pulmo: Pediatric Cough Classifier Training
@@ -60,7 +60,7 @@ import evaluate
 SEED = 42
 random.seed(SEED); np.random.seed(SEED); torch.manual_seed(SEED)
 
-# 6-class pediatric output matching submission/form-draft.md.
+# 6-class pediatric output matching the project profile.
 LABEL2ID = {
     "healthy": 0,
     "common_cold": 1,
@@ -444,7 +444,7 @@ trainer.train()
 
 # %% [markdown]
 # ## 8. Evaluation on held-out test set
-# Targets per `submission/accuracy.md`:
+# Targets per `../submissions/accuracy.md`:
 #   • Pediatric pneumonia sensitivity ≥84% (JAMA Pediatrics 2018 bar)
 #   • Realistic v0 lab estimate: 70–78%
 #   • Field deployment estimate: 58–68% (10–15 pp drop expected)

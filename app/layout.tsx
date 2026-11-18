@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 export const metadata: Metadata = {
   title: "Baby Pulmo — AI Pediatric Cough Diagnostic",
   description:
-    "Bangla voice-first WhatsApp AI that classifies pediatric respiratory disease from a 30-second cough recording. THE INFINITY AI BUILDFEST 2026."
+    "Bangla voice-first WhatsApp AI that classifies pediatric respiratory disease from a 30-second cough recording."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
