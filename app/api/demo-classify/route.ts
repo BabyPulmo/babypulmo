@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { classifyCough, simulateClassification } from "@/lib/classifier";
 import { decideSeverityMultiModal } from "@/lib/claude";
-import { getStockBangla, synthesizeBanglaCached } from "@/lib/tts";
+import { GENERIC_BANGLA, getStockBangla, synthesizeBanglaCached } from "@/lib/tts";
 import { retrieveImci } from "@/lib/rag";
 import { findNearestChw } from "@/lib/escalation";
 import { audit } from "@/lib/audit";
@@ -70,10 +70,17 @@ export async function POST(req: NextRequest) {
 
     // 2. Classify — real Modal endpoint when configured, else randomized simulation.
     let classification: ClassificationResult;
-    if (SIMULATED || !audioUrl) {
+    let simulated = SIMULATED || !audioUrl;
+    if (simulated) {
       classification = simulateClassification();
     } else {
-      classification = await classifyCough(audioUrl);
+      try {
+        classification = await classifyCough(audioUrl!);
+      } catch (e) {
+        console.warn("[demo-classify] classifier unavailable, using labelled simulation:", (e as Error).message);
+        simulated = true;
+        classification = simulateClassification();
+      }
     }
     // The browser-measured RR is the real signal; prefer it over the classifier's.
     classification.breathsPerMin = breathsPerMin ?? classification.breathsPerMin ?? null;
@@ -96,16 +103,12 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Real clinician-vetted (draft) Bangla guidance + optional TTS audio.
-    const banglaText =
-      getStockBangla(classification.class, decision.severity) ??
-      "এই মুহূর্তে নির্দিষ্ট নির্দেশনা পাওয়া যায়নি — নিকটস্থ স্বাস্থ্যকর্মীর সঙ্গে যোগাযোগ করুন।";
+    const banglaText = getStockBangla(classification.class, decision.severity) ?? GENERIC_BANGLA;
     let ttsUrl: string | null = null;
-    if (process.env.GCP_TTS_API_KEY) {
-      try {
-        ttsUrl = (await synthesizeBanglaCached(banglaText)).url;
-      } catch (e) {
-        console.warn("[demo-classify] tts skipped:", (e as Error).message);
-      }
+    try {
+      ttsUrl = (await synthesizeBanglaCached(banglaText)).url || null;
+    } catch (e) {
+      console.warn("[demo-classify] tts skipped:", (e as Error).message);
     }
 
     // 6. Persist classification + guidance + audit (so /docs analytics updates).
@@ -131,7 +134,7 @@ export async function POST(req: NextRequest) {
       eventType: "classification_complete",
       payload: {
         source: "web_demo",
-        simulated: SIMULATED,
+        simulated,
         class: classification.class,
         confidence: classification.confidence,
         breathsPerMin: classification.breathsPerMin,
@@ -164,7 +167,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({
-      simulated: SIMULATED,
+      simulated,
       class: classification.class,
       confidence: classification.confidence,
       classProbs: classification.classProbs,

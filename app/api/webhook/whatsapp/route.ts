@@ -3,7 +3,12 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { classifyCough } from "@/lib/classifier";
 import { retrieveImci } from "@/lib/rag";
 import { decideSeverityMultiModal } from "@/lib/claude";
-import { getStockBangla, synthesizeBanglaCached } from "@/lib/tts";
+import {
+  GENERIC_BANGLA,
+  SCREENING_UNAVAILABLE_BANGLA,
+  getStockBangla,
+  synthesizeBanglaCached
+} from "@/lib/tts";
 import { findNearestChw } from "@/lib/escalation";
 import { audit } from "@/lib/audit";
 import { classifyCxr } from "@/lib/cxr-vision";
@@ -161,8 +166,29 @@ export async function POST(req: NextRequest) {
       source: "whatsapp"
     });
 
-    // 3. Classify cough audio
-    const classification = await classifyCough(audioUrl);
+    // 3. Classify cough audio. If the model is unavailable we never send a
+    // simulated result to a real caregiver — only an honest "see a health
+    // worker" notice.
+    let classification;
+    try {
+      classification = await classifyCough(audioUrl);
+    } catch (err) {
+      console.error("[whatsapp webhook] classifier unavailable", err);
+      await audit({
+        eventType: "classifier_unavailable",
+        payload: { error: err instanceof Error ? err.message : String(err) },
+        recordingId,
+        caregiverId
+      });
+      await sendText(from, SCREENING_UNAVAILABLE_BANGLA);
+      try {
+        const notice = await synthesizeBanglaCached(SCREENING_UNAVAILABLE_BANGLA);
+        if (notice.url) await sendAudio(from, notice.url);
+      } catch (ttsErr) {
+        console.warn("[tts] notice audio unavailable, text only", ttsErr);
+      }
+      return new NextResponse("ok", { status: 200 });
+    }
 
     // 3b. Optional CXR — if the caregiver also uploaded a chest X-ray photo
     // (smartphone-of-CXR-on-backlit-panel in the rural-clinic case), call
@@ -228,7 +254,7 @@ export async function POST(req: NextRequest) {
       cxr: cxrSignal
     });
     const banglaText =
-      getStockBangla(classification.class, decision.severity) ?? ERROR_BANGLA;
+      getStockBangla(classification.class, decision.severity) ?? GENERIC_BANGLA;
 
     // 6. Bangla TTS — content-hash cached. Stock scripts pre-warmed via
     // `warmStockCache()` so almost every call hits the cache and skips GCP TTS.
