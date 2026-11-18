@@ -37,3 +37,4 @@ colab/data/
 # IDE
 .vscode/
 .idea/
+.gstack/
