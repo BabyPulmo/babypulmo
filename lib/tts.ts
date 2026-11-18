@@ -34,7 +34,15 @@ export function getStockBangla(c: CoughClass, s: Severity): string | null {
   return STOCK_BANGLA[`${c}:${s}` as keyof typeof STOCK_BANGLA] ?? null;
 }
 
-function hashKey(text: string): string {
+// Fallbacks are pre-rendered into the audio cache alongside the stock scripts
+// (scripts/tts-manifest.ts), so they play as audio even with no TTS provider.
+export const GENERIC_BANGLA =
+  "এই মুহূর্তে নির্দিষ্ট নির্দেশনা পাওয়া যায়নি — নিকটস্থ স্বাস্থ্যকর্মীর সঙ্গে যোগাযোগ করুন।";
+
+export const SCREENING_UNAVAILABLE_BANGLA =
+  "দুঃখিত, এই মুহূর্তে কাশি পরীক্ষার সেবাটি সাময়িকভাবে বন্ধ আছে। আপনার শিশুর দ্রুত শ্বাস, শ্বাসকষ্ট বা জ্বর থাকলে এখনই নিকটস্থ স্বাস্থ্যকর্মী বা হাসপাতালে যোগাযোগ করুন। জরুরি প্রয়োজনে ৯৯৯ নম্বরে কল করুন।";
+
+export function hashKey(text: string): string {
   return createHash("sha256").update(text.trim()).digest("hex").slice(0, 32);
 }
 
@@ -108,7 +116,9 @@ export async function warmStockCache(): Promise<{ warmed: number; alreadyCached:
 // use synthesizeBanglaCached instead so repeat scripts cost nothing.
 export async function synthesizeBangla(text: string): Promise<Buffer> {
   if (!GCP_TTS_API_KEY) {
-    throw new Error("GCP_TTS_API_KEY must be set");
+    throw new Error(
+      "No cached audio for this text and no GCP_TTS_API_KEY — pre-render it with scripts/prerender_tts.py"
+    );
   }
 
   const res = await fetch(
