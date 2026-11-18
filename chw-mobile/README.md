@@ -40,7 +40,7 @@ The cough classifier (Wav2Vec2 int8 ONNX, ~280 MB FP32, ~70 MB int8) runs **serv
 
 ## Models we test (form claim)
 
-For the BuildFest form's Local LLMs / On-device LLMs section we claim only models actually downloaded and run during the 24-hour build push:
+For competition forms' Local LLMs / On-device LLMs sections we claim only models actually downloaded and run during the 24-hour build push:
 
 - ☑ **Ollama** runtime + bonus
 - ☑ **Qwen 2.5** (primary)

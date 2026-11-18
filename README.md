@@ -2,7 +2,7 @@
 
 > Bangla voice-first WhatsApp AI that classifies pediatric respiratory disease from a 30-second cough recording.
 
-**Production:** https://babypulmo.com  •  **Org:** https://github.com/BabyPulmo  •  **Submission for:** THE INFINITY AI BUILDFEST 2026 (HealthTech) — preliminary **2026-05-30**, finals **2026-06-12 (Dhaka)**.
+**Production:** https://babypulmo.com  •  **Org:** https://github.com/BabyPulmo  •  **Track:** HealthTech (AI for pediatric respiratory screening).
 
 ## What this is
 
@@ -110,7 +110,7 @@ babypulmo/
 │   │   ├── page.tsx                           # CHW alerts dashboard
 │   │   └── investigate/page.tsx               # Agentic investigation dashboard (Phase 3F)
 │   ├── docs/
-│   │   ├── page.tsx                           # Live /docs module (BuildFest bonus)
+│   │   ├── page.tsx                           # Live /docs module
 │   │   └── sections/AuditAnalytics.tsx        # DuckDB-WASM analytics cell
 │   ├── page.tsx                               # Landing
 │   └── layout.tsx
@@ -204,7 +204,7 @@ For the full carve-out rationale (where LLMs ARE allowed in the project and wher
 
 ## Performance & accuracy posture
 
-Honest numbers (`/Users/mdferdousalam/.../submission/accuracy.md`):
+Honest numbers (`../submissions/accuracy.md`):
 
 - **Lab (Coswara/COUGHVID test split, pediatric pneumonia sensitivity):** 70–78%
 - **Field (rural BD, real phones, real noise):** **expect 58–68% degradation**

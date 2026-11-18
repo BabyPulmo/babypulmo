@@ -13,8 +13,8 @@ Baby Pulmo: a WhatsApp-native AI that takes a 30-second cough voice note from a 
 
 ## Success criteria
 
-1. **BuildFest 2026 prelim shortlist** (deadline 2026-05-30) — top 200 of submissions.
-2. **BuildFest 2026 finals** (2026-06-12 Dhaka) — top placement.
+1. **Competition shortlists** — placement in AI/healthtech founder competitions (tracked under `../submissions/`).
+2. **Investor readiness** — pitch materials in `../investor/`.
 3. **BMRC ethics review approval** for the BRAC Bogura pilot study protocol.
 4. **BRAC Bogura pilot** rollout Q3 2026 (≥ 1,000 caregivers, ≥ 50 CHWs, ≥ 4 upazilas).
 5. **Sensitivity ≥ 65%** field-deployed on pediatric pneumonia (triage filter, not diagnostic). Specificity tuned to minimize CHW over-triage.

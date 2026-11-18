@@ -3,7 +3,7 @@
 > 22 paste-ready prompts for **Stitch by Google** (https://stitch.withgoogle.com) to generate Figma-quality mockups for every Baby Pulmo screen.
 >
 > **Owner:** Shanta (UI/UX + Presentation Lead).
-> **Goal:** Have polished Figma designs for every page by **2026-05-30** so Ferdous can paste live URLs into the BuildFest form.
+> **Goal:** Have polished Figma designs for every page by **2026-05-30** so Ferdous can paste live URLs into competition and investor forms.
 
 ---
 
@@ -97,7 +97,7 @@ LAYOUT (top → bottom):
    Far right: orange primary button "Try the demo" → links to WhatsApp.
 
 2. HERO — pulmo-50 bg, ~640px tall.
-   Eyebrow text-xs uppercase pulmo-500: "THE INFINITY AI BUILDFEST 2026 · HealthTech"
+   Eyebrow text-xs uppercase pulmo-500: "AI for Pediatric Health · HealthTech"
    h1 text-6xl bold pulmo-900: "Baby Pulmo"
    Subhead Bangla text-2xl pulmo-700: "বেবি পুলমো — listening to your child's breath"
    Body text-lg slate-700: "A Bangla voice-first WhatsApp AI that listens to a child's cough and tells the mother, in her own language, whether her baby has signs of pneumonia. In 10 seconds. For free."
@@ -214,7 +214,7 @@ Style: lots of whitespace, single-column on mobile, pulmo-50 page bg, white card
 #### 1.3 `/team` — bios page ☆ nice-to-have
 
 ```
-Design a team bios page at babypulmo.com/team. Desktop primary, mobile responsive. Purpose: BuildFest judges + investors evaluating who built this.
+Design a team bios page at babypulmo.com/team. Desktop primary, mobile responsive. Purpose: judges + investors evaluating who built this.
 
 LAYOUT:
 
@@ -249,7 +249,7 @@ LAYOUT:
    Placeholder logos: BMRC (ethics review path), BRAC (pilot partner), Anthropic / Claude Code (built with).
 
 6. JOIN US CTA — pulmo-500 bg full-width card.
-   "We're hiring after BuildFest. Roles: ML engineer, CHW operations, BD partnerships. → klikk.ai.new@gmail.com"
+   "We're hiring. Roles: ML engineer, CHW operations, BD partnerships. → klikk.ai.new@gmail.com"
 
 7. FOOTER — same as landing.
 

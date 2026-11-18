@@ -43,7 +43,7 @@ Spec-driven AI-DLC artifact built per the BMAD-METHOD (Brian Madison Agile Devel
 | Cost per interaction (weighted avg) | < $0.005 | < $0.003 |
 | BMRC ethics-review approval | submitted | approved |
 
-See `submission/accuracy.md` for honest accuracy expectations and the architectural argument that 65% is enough.
+See `../submissions/accuracy.md` for honest accuracy expectations and the architectural argument that 65% is enough.
 
 ---
 
@@ -101,4 +101,4 @@ This is the BMAD agent contract for this repo, adapted to Claude Code's plan-mod
 - Runtime LLM in the caregiver path (deterministic clinical-decision-support posture).
 - LLM-driven severity decisions (only the rules table writes severity).
 - Diagnostic claims (we are a screening tool, not a medical device).
-- Graph RAG (deferred to post-finals — see `submission/form-draft.md` holdouts).
+- Graph RAG (deferred to a later phase).

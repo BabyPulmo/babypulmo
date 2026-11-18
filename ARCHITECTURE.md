@@ -1,6 +1,6 @@
 # Baby Pulmo — Architecture
 
-Baby Pulmo implements all 8 layers of the BuildFest 2026 AI-Native Reference Architecture (participant guide, page 8). This document maps each layer to the actual implementation files in this repo.
+Baby Pulmo implements all 8 layers of a standard AI-native reference architecture. This document maps each layer to the actual implementation files in this repo.
 
 ## End-to-end data flow
 
@@ -134,7 +134,7 @@ Each of these carve-outs is documented in the referenced file's README so any re
 
 3. **Mandatory human-in-loop.** Every severe classification routes to a real Community Health Worker with the original audio attached. No automated treatment recommendations beyond "see a doctor."
 
-4. **Explainability.** Every classification returns a Grad-CAM spectrogram heatmap showing which acoustic features drove the result. This satisfies the BuildFest's "explainable AI" requirement for HealthTech.
+4. **Explainability.** Every classification returns a Grad-CAM spectrogram heatmap showing which acoustic features drove the result. This satisfies the "explainable AI" requirement for HealthTech.
 
 5. **Immutable audit log.** Every interaction (greeting, classification, escalation, error) writes a row to `audit_log` with the full payload. This satisfies the BMRC ethics review trail requirement for clinical deployment.
 
@@ -153,7 +153,7 @@ app/
     page.tsx                           → realtime CHW alerts dashboard
     investigate/page.tsx               → agentic investigation dashboard (Phase 3F)
   docs/
-    page.tsx                           → live /docs module (BuildFest bonus, Phase 1B)
+    page.tsx                           → live /docs module (Phase 1B)
     sections/AuditAnalytics.tsx        → DuckDB-WASM analytics cell over the latest Parquet partition
   page.tsx                             → public landing
   layout.tsx                           → app shell + Bangla font

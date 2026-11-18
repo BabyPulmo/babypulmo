@@ -1,4 +1,4 @@
-# DEMO.md — Baby Pulmo demo runbook (BuildFest finals)
+# DEMO.md — Baby Pulmo demo runbook (live pitch)
 
 A ~3-minute, click-by-click walkthrough for judges. Story-first, with the **live**
 CHW dashboard and **live** analytics as the proof points. Honest framing throughout —

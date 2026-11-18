@@ -4,7 +4,7 @@ Canonical context anchor for Claude Code sessions on this repo. Mirrored at `AGE
 
 ## Project
 
-Baby Pulmo: WhatsApp-native AI for pediatric pneumonia screening in rural Bangladesh. Caregiver sends a 30-second cough voice note via WhatsApp → 6-class Wav2Vec2 classifier on Modal → multi-modal severity decision → Bangla audio reply from a clinician-vetted stock library → severe cases auto-escalate to nearest CHW via PostGIS routing. BuildFest 2026 submission; BRAC pilot scoped for Q3 2026.
+Baby Pulmo: WhatsApp-native AI for pediatric pneumonia screening in rural Bangladesh. Caregiver sends a 30-second cough voice note via WhatsApp → 6-class Wav2Vec2 classifier on Modal → multi-modal severity decision → Bangla audio reply from a clinician-vetted stock library → severe cases auto-escalate to nearest CHW via PostGIS routing. BRAC pilot scoped for Q3 2026.
 
 ## The single non-negotiable
 
@@ -51,13 +51,9 @@ No test suite shipped yet (build-time eval lives in `agents/langgraph-eval/`).
 
 Every claim in any doc, form field, or commit message must cite a file path. Before adding a claim, `grep` to confirm the artifact exists. No "we have X" without `path/to/x`.
 
-## Honest scoring policy
-
-No fabricated bonuses for BuildFest forms. If a feature isn't in the code, don't claim it in `submission/form-draft.md`. The five gemini-flagged "honest holdouts" remain: Graph RAG, Figma, 5th team member pending, plus anything truly not shipped.
-
 ## Read before non-trivial work
 
 - `ARCHITECTURE.md` — 8-layer system + §3 carve-out.
 - `docs/BMAD_PRD.md` — personas + epics + invariants.
 - `docs/KIRO_SPEC.md` — system spec + Kiro invariants.
-- `submission/accuracy.md` — what we'll honestly hit (70–78% v0, 58–68% field).
+- `../submissions/accuracy.md` — what we'll honestly hit (70–78% v0, 58–68% field).

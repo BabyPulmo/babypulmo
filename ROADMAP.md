@@ -242,7 +242,7 @@ multilingual reranker. Without it `lib/rag.ts` uses the blended-score fallback.
    ICBHI, filters pediatric (≤5 yr), fine-tunes Wav2Vec2-XLSR-53 with SpecAugment,
    and exports **`babypulmo_wav2vec2_int8.onnx`**.
 3. Download the ONNX file and the printed classification report.
-4. Record honest per-class sensitivity in `submission/accuracy.md`
+4. Record honest per-class sensitivity in `../submissions/accuracy.md`
    (expected lab: 70–78% pneumonia sensitivity).
 
 ### B3. Reconcile the class-label spaces — **DONE (mapping-layer approach)**

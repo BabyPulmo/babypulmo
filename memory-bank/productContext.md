@@ -14,7 +14,7 @@ Bangladesh loses ~25,000 children under five to pneumonia every year. **63% of f
 
 We do not claim diagnosis. Every output frames as "the cough shows signs of X, see a doctor" — never "your child has X." Mandatory human-in-the-loop: every severe classification escalates to a real CHW with the original audio attached. Same regulatory posture as **ResApp Health** (Pfizer acquired AUD $179M, 2022).
 
-This is why **65% sensitivity is enough**: Baby Pulmo is the upstream filter. Every triggered case routes to a human who makes the actual clinical decision. The cost of a false negative isn't a wrong diagnosis — it's the same "no diagnosis at all" baseline that already costs 25,000 lives/year. False positives are bounded by CHW capacity, which the PostGIS load-balancer manages. See `submission/accuracy.md` for the full posture.
+This is why **65% sensitivity is enough**: Baby Pulmo is the upstream filter. Every triggered case routes to a human who makes the actual clinical decision. The cost of a false negative isn't a wrong diagnosis — it's the same "no diagnosis at all" baseline that already costs 25,000 lives/year. False positives are bounded by CHW capacity, which the PostGIS load-balancer manages. See `../submissions/accuracy.md` for the full posture.
 
 ## Why each stack choice
 
